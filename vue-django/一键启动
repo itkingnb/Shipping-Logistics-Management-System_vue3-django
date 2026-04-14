@@ -1,0 +1,8 @@
+cd v*
+cd f*
+cd S*
+npm run dev
+
+cd v*
+cd b*
+python manage.py runserver
