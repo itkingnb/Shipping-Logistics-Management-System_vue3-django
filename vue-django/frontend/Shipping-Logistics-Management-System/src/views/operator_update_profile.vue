@@ -1,0 +1,168 @@
+<template>
+  <div class="layout">
+
+    <!-- sidebar -->
+    <div class="sidebar">
+      <div class="logo-container">
+        <div class="logo">
+          <i class="fas fa-ship"></i>
+          <span class="logo-text">航运物流公司管理系统</span>
+        </div>
+      </div>
+
+      <ul class="nav-links">
+        <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
+        <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
+        <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
+        <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
+        <li><router-link to="/order"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
+        <li><router-link to="/operator_update_profile"class="active"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
+      </ul>
+    </div>
+
+    <!-- main -->
+    <div class="main-content">
+
+      <div class="header">
+        <h1>操作员信息维护</h1>
+
+        <div class="user-info">
+          <img :src="user.avatar || defaultAvatar" />
+          <div>
+            <div>{{ user.username || '操作员' }}</div>
+            <div class="role">
+              {{ user.role === 'operator' ? '操作员' : user.role }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 卡片 -->
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-edit"></i> 基本信息</h2>
+        </div>
+
+        <div class="card-body">
+
+          <!-- 头像 -->
+          <div class="avatar-section">
+            <div class="avatar-container">
+              <img :src="preview || user.avatar || defaultAvatar" class="avatar-img"/>
+
+              <button class="avatar-upload" @click="triggerFile">
+                <i class="fas fa-camera"></i>
+              </button>
+
+              <input type="file" ref="fileInput" @change="onFileChange" hidden />
+            </div>
+          </div>
+
+          <!-- 表单 -->
+          <div class="form-group">
+            <label>用户ID</label>
+            <input class="form-control" v-model="user.id" readonly />
+          </div>
+
+          <div class="form-group">
+            <label>角色</label>
+            <input class="form-control" :value="'操作员'" readonly />
+          </div>
+
+          <div class="form-group">
+            <label>用户名 *</label>
+            <input class="form-control" v-model="user.username" />
+          </div>
+
+          <div class="form-group">
+            <label>电话 *</label>
+            <input class="form-control" v-model="user.phone" />
+          </div>
+
+          <div class="form-group">
+            <label>邮箱 *</label>
+            <input class="form-control" v-model="user.email" />
+          </div>
+
+          <!-- 按钮 -->
+          <div class="btn-row">
+            <button class="btn btn-primary" @click="submit">保存修改</button>
+            <button class="btn btn-danger" @click="logout">退出登录</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const user = ref({})
+const file = ref(null)
+const preview = ref('')
+const defaultAvatar = '/avatar.png'
+const fileInput = ref(null)
+
+// 跳转
+const go = (path) => router.push(path)
+
+// 修正头像路径
+const fixAvatar = (u) => {
+  if (u.avatar && !u.avatar.startsWith('http')) {
+    u.avatar = 'http://127.0.0.1:8000/' + u.avatar
+  }
+  return u
+}
+
+// 加载数据（改接口）
+const load = async () => {
+  const res = await axios.get('/api/operator_get_profile/')
+  if (res.data.success) {
+    user.value = fixAvatar(res.data.data)
+  }
+}
+
+// 选文件
+const triggerFile = () => fileInput.value.click()
+
+const onFileChange = (e) => {
+  file.value = e.target.files[0]
+  preview.value = URL.createObjectURL(file.value)
+}
+
+// 提交（改接口）
+const submit = async () => {
+  const form = new FormData()
+  form.append('username', user.value.username)
+  form.append('phone', user.value.phone)
+  form.append('email', user.value.email)
+
+  if (file.value) {
+    form.append('avatar', file.value)
+  }
+
+  const res = await axios.post('/api/operator_update_profile/', form)
+
+  if (res.data.success) {
+    alert('更新成功')
+    load()
+  } else {
+    alert(res.data.message)
+  }
+}
+
+// 退出
+const logout = () => {
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+onMounted(load)
+</script>

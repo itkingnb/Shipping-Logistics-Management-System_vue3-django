@@ -10,12 +10,12 @@
       </div>
 
       <ul class="nav-links">
-        <li><a class="active"><i class="fas fa-tachometer-alt"></i><span class="link-text">报表统计</span></a></li>
+        <li><router-link to="/operator"class="active"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
         <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
         <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
         <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
         <li><router-link to="/order"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
-        <li><router-link to="/settings"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
+        <li><router-link to="/operator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -168,7 +168,7 @@ body{background:#edf2f7}
 
 .sidebar{width:250px;background:var(--primary);color:#fff;position:fixed;height:100%}
 .logo-container{padding:20px;border-bottom:1px solid rgba(255,255,255,.1)}
-.logo{display:flex;align-items:center;font-weight:700}
+.logo{display:flex;align-items:center;font-weight:700;white-space: nowrap;  }
 .logo i{margin-right:10px;color:var(--accent)}
 
 .nav-links a{display:flex;align-items:center;padding:12px 20px;color:rgba(255,255,255,.8);text-decoration:none}

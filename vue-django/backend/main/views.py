@@ -1,7 +1,7 @@
 import re
 
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 
 # Create your views here.
 from rest_framework.decorators import api_view
@@ -516,3 +516,530 @@ def operator_user_info_api(request):
         "avatar": user_info.get("avatar"),
         "role": user_info.get("role"),
     })
+
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+from .models import Customer
+
+def customer_list_api(request):
+    page_number = request.GET.get('page', 1)
+    keyword = request.GET.get('keyword', '').strip()
+
+    customers = Customer.objects.all().order_by('customer_id')
+
+    if keyword:
+        customers = customers.filter(
+            Q(customer_name__icontains=keyword) |
+            Q(customer_phone__icontains=keyword) |
+            Q(customer_email__icontains=keyword)
+        )
+
+    paginator = Paginator(customers, 10)
+    page_obj = paginator.get_page(page_number)
+
+    data = [
+        {
+            "customer_id": c.customer_id,
+            "customer_name": c.customer_name,
+            "customer_email": c.customer_email,
+            "customer_phone": c.customer_phone,
+            "customer_address": c.customer_address,
+        }
+        for c in page_obj
+    ]
+
+    return JsonResponse({
+        "success": True,
+        "data": {
+            "customers": data,
+            "pagination": {
+                "current_page": page_obj.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+            }
+        }
+    })
+
+@api_view(['POST'])
+def create_customer_api(request):
+    data = request.data
+
+    name = data.get('customer_name', '').strip()
+    phone = data.get('customer_phone', '').strip()
+    email = data.get('customer_email', '').strip()
+    address = data.get('customer_address', '').strip()
+
+    if not name or not phone or not address:
+        return Response({'msg': '必填项不能为空'}, status=400)
+
+    if len(phone) != 11 or not phone.isdigit():
+        return Response({'msg': '手机号不合法'}, status=400)
+
+    if Customer.objects.filter(customer_phone=phone).exists():
+        return Response({'msg': '手机号已存在'}, status=400)
+
+    Customer.objects.create(
+        customer_name=name,
+        customer_phone=phone,
+        customer_email=email,
+        customer_address=address
+    )
+
+    return Response({'msg': 'success'})
+
+@csrf_exempt
+def edit_customer(request, customer_id):
+    customer = Customer.objects.get(customer_id=customer_id)
+
+    data = json.loads(request.body)
+
+    customer.customer_name = data["customer_name"]
+    customer.customer_phone = data["customer_phone"]
+    customer.customer_email = data.get("customer_email", "")
+    customer.customer_address = data["customer_address"]
+    customer.save()
+
+    return JsonResponse({"code": 0, "msg": "updated"})
+
+
+@csrf_exempt
+def delete_customer(request, customer_id):
+    if request.method == "DELETE":
+        customer = Customer.objects.get(customer_id=customer_id)
+        customer.delete()
+        return JsonResponse({"msg": "ok"})
+
+def customer_detail(request, customer_id):
+    customer = Customer.objects.get(customer_id=customer_id)
+
+    return JsonResponse({
+        "customer_id": customer.customer_id,
+        "customer_name": customer.customer_name,
+        "customer_phone": customer.customer_phone,
+        "customer_email": customer.customer_email,
+        "customer_address": customer.customer_address,
+    })
+
+def port_list_api(request):
+    page = request.GET.get("page", 1)
+    keyword = request.GET.get("keyword", "").strip()
+
+    qs = Port.objects.all().order_by("port_id")
+
+    if keyword:
+        qs = qs.filter(
+            Q(port_code__icontains=keyword) |
+            Q(port_name__icontains=keyword) |
+            Q(port_name_en__icontains=keyword) |
+            Q(country__icontains=keyword) |
+            Q(city__icontains=keyword)
+        )
+
+    paginator = Paginator(qs, 10)
+    page_obj = paginator.get_page(page)
+
+    data = []
+    for p in page_obj:
+        data.append({
+            "port_id": p.port_id,
+            "port_code": p.port_code,
+            "port_name": p.port_name,
+            "port_name_en": p.port_name_en,
+            "country": p.country,
+            "city": p.city,
+            "latitude": p.latitude,
+            "longitude": p.longitude,
+            "contact_person": p.contact_person,
+            "contact_phone": p.contact_phone,
+            "status": p.status,
+        })
+
+    return JsonResponse({
+        "list": data,
+        "page": page_obj.number,
+        "total_pages": paginator.num_pages,
+        "total": paginator.count,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
+
+import json
+from django.http import JsonResponse
+from .models import Port
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def create_port_api(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+
+        Port.objects.create(
+            port_code=data.get("port_code"),
+            port_name=data.get("port_name"),
+            port_name_en=data.get("port_name_en"),
+            city=data.get("city"),
+            country=data.get("country"),
+            longitude=data.get("longitude"),
+            latitude=data.get("latitude"),
+            contact_person=data.get("contact_person"),
+            contact_phone=data.get("contact_phone"),
+            status=data.get("status"),
+        )
+
+        return JsonResponse({"msg": "ok"})
+    
+
+from django.forms.models import model_to_dict
+@csrf_exempt
+def port_detail(request, port_id):
+    port = Port.objects.get(port_id=port_id)
+
+    if request.method == "GET":
+        return JsonResponse(model_to_dict(port))
+
+    elif request.method == "PUT":
+        data = json.loads(request.body)
+
+        for k, v in data.items():
+            setattr(port, k, v)
+
+        port.save()
+        return JsonResponse({"msg": "updated"})
+
+    elif request.method == "DELETE":
+        port.delete()
+        return JsonResponse({"msg": "deleted"})
+    
+@csrf_exempt
+def delete_port(request, port_id):
+    print(111)
+    if request.method == "DELETE":
+        port = Port.objects.get(port_id=port_id)
+        port.delete()
+        return JsonResponse({"msg": "ok"})
+    
+def cargo_list(request):
+    keyword = request.GET.get("keyword", "")
+    page = int(request.GET.get("page", 1))
+
+    qs = Cargo.objects.all()
+
+    if keyword:
+        qs = qs.filter(cargo_name__icontains=keyword)
+
+    paginator = Paginator(qs, 10)
+    page_obj = paginator.get_page(page)
+
+    data = []
+    for c in page_obj:
+        data.append({
+            "cargo_id": c.cargo_id,
+            "cargo_name": c.cargo_name,
+            "cargo_type": c.cargo_type,
+            "cargo_weight": c.cargo_weight,
+            "cargo_volume": c.cargo_volume,
+            "cargo_amount": c.cargo_amount,
+            "inventory": c.inventory
+        })
+
+    return JsonResponse({
+        "list": data,
+        "page": page,
+        "total_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous()
+    })
+
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+@csrf_exempt
+def create_cargo_api(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+
+        Cargo.objects.create(
+            cargo_name=data.get("cargo_name"),
+            cargo_type=data.get("cargo_type"),
+            cargo_weight=data.get("cargo_weight"),
+            cargo_volume=data.get("cargo_volume"),
+            inventory=data.get("inventory"),
+            cargo_amount=data.get("cargo_amount"),
+        )
+
+        return JsonResponse({"msg": "ok"})
+
+from django.http import JsonResponse
+from django.forms.models import model_to_dict
+@csrf_exempt
+def edit_cargo(request, cargo_id):
+    cargo = get_object_or_404(Cargo, cargo_id=cargo_id)
+
+    if request.method == 'GET':
+        return JsonResponse(model_to_dict(cargo))
+
+    if request.method == 'PUT':
+        import json
+        data = json.loads(request.body)
+
+        try:
+            cargo_name = data.get('cargo_name', '').strip()
+            cargo_type = data.get('cargo_type', '').strip()
+            cargo_weight = float(data.get('cargo_weight'))
+            cargo_volume = float(data.get('cargo_volume'))
+            inventory = int(data.get('inventory'))
+            cargo_amount = float(data.get('cargo_amount'))
+
+            if cargo_weight < 0 or cargo_volume < 0 or inventory < 0 or cargo_amount < 0:
+                return JsonResponse({'error': '不能为负数'}, status=400)
+
+            cargo.cargo_name = cargo_name
+            cargo.cargo_type = cargo_type
+            cargo.cargo_weight = cargo_weight
+            cargo.cargo_volume = cargo_volume
+            cargo.inventory = inventory
+            cargo.cargo_amount = cargo_amount
+            cargo.save()
+
+            return JsonResponse({'msg': 'success'})
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+@csrf_exempt
+def delete_cargo(request, id):
+    if request.method == "DELETE":
+        Cargo.objects.filter(cargo_id=id).delete()
+        return JsonResponse({"msg": "ok"})
+    
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+import json
+
+@csrf_exempt
+@transaction.atomic
+def create_order(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "仅支持 POST"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+
+        user_info = request.session.get('user_info')
+        if not user_info:
+            return JsonResponse({"error": "未登录"}, status=401)
+
+        created_by = User.objects.get(username=user_info['name'])
+
+        origin_port_id = data.get('origin_port')
+        destination_port_id = data.get('destination_port')
+        customer_id = data.get('customer')
+        is_draft = data.get('is_draft', False)
+
+        # ===== 校验 =====
+        if origin_port_id == destination_port_id:
+            return JsonResponse({"error": "始发港和目的港不能相同"}, status=400)
+
+        # ===== 查港口 =====
+        origin_port_name = None
+        destination_port_name = None
+
+        if origin_port_id:
+            port = Port.objects.filter(port_id=origin_port_id).first()
+            if port:
+                origin_port_name = port.port_name
+
+        if destination_port_id:
+            port = Port.objects.filter(port_id=destination_port_id).first()
+            if port:
+                destination_port_name = port.port_name
+
+        # ===== 客户 =====
+        customer = None
+        if customer_id:
+            customer = Customer.objects.filter(customer_id=customer_id).first()
+
+        # ===== 状态 =====
+        order_status = "草稿" if is_draft else "待指派"
+
+        # ===== 货物 =====
+        cargo_list = data.get("cargo_list", [])
+
+        # ===== 库存检查 =====
+        for item in cargo_list:
+            cargo = Cargo.objects.select_for_update().get(cargo_id=item["cargo_id"])
+            if cargo.inventory < int(item["quantity"]):
+                return JsonResponse({
+                    "error": f"货物【{cargo.cargo_name}】库存不足（剩余 {cargo.inventory}）"
+                }, status=400)
+
+        # ===== 创建订单 =====
+        order = Order.objects.create(
+            created_by=created_by,
+            customer=customer,
+            origin_port=origin_port_name,
+            destination_port=destination_port_name,
+            order_status=order_status,
+            total_amount=0
+        )
+
+        total_amount = 0
+
+        for item in cargo_list:
+            cargo = Cargo.objects.select_for_update().get(cargo_id=item["cargo_id"])
+            quantity = int(item["quantity"])
+
+            # 扣库存
+            cargo.inventory -= quantity
+            cargo.save()
+
+            # 订单货物
+            OrderCargo.objects.create(
+                cargo=cargo,
+                order=order,
+                quantity=quantity
+            )
+
+            total_amount += cargo.cargo_amount * quantity
+
+        order.total_amount = total_amount
+        order.save()
+
+        return JsonResponse({
+            "message": "订单创建成功",
+            "order_id": order.id
+        })
+
+    except Exception as e:
+        print("❌ 创建订单失败:", e)
+        return JsonResponse({"error": str(e)}, status=500)
+    
+from django.http import JsonResponse
+
+def operator_get_profile(request):
+    user_info = request.session.get('user_info')
+    user_id=user_info['id']
+    print(user_id)
+    if not user_id:
+        return JsonResponse({
+            "success": False,
+            "message": "未登录"
+        })
+
+    try:
+        user = User.objects.select_related('role').get(user_id=user_id)
+
+        return JsonResponse({
+            "success": True,
+            "data": {
+                "id": user.user_id,
+                "username": user.username,
+                "phone": user.phone,
+                "email": user.email,
+                "role": user.role.role_name if user.role else "操作员",
+                "avatar": user.photo or ""
+            }
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "message": "用户不存在"
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
+import os, uuid
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def operator_update_profile(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "非法请求"})
+
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    try:
+        user = User.objects.get(user_id=user_id)
+
+        # ===== 获取表单数据 =====
+        username = request.POST.get("username", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        email = request.POST.get("email", "").strip()
+        avatar_file = request.FILES.get("avatar")
+
+        # ===== 基础校验 =====
+        if not username or not phone or not email:
+            return JsonResponse({
+                "success": False,
+                "message": "用户名、电话、邮箱不能为空"
+            })
+
+        # ===== 更新字段 =====
+        user.username = username
+        user.phone = phone
+        user.email = email
+
+        # ===== 头像处理 =====
+        if avatar_file:
+            ext = os.path.splitext(avatar_file.name)[1]
+            filename = f"{uuid.uuid4().hex}{ext}"
+
+            save_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
+            os.makedirs(save_dir, exist_ok=True)
+
+            file_path = os.path.join(save_dir, filename)
+
+            with open(file_path, 'wb+') as f:
+                for chunk in avatar_file.chunks():
+                    f.write(chunk)
+
+            user.photo = f'/media/avatars/{filename}'
+
+        user.save()
+
+        # ===== 更新 session =====
+        request.session['user_info'] = {
+            'id': user.user_id,
+            'name': user.username,
+            'role': user.role.role_name if user.role else '操作员',
+            'avatar': user.photo,
+        }
+
+        return JsonResponse({
+            "success": True,
+            "message": "更新成功",
+            "data": {
+                "id": user.user_id,
+                "username": user.username,
+                "phone": user.phone,
+                "email": user.email,
+                "avatar": user.photo,
+                "role": user.role.role_name if user.role else '操作员'
+            }
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "message": "用户不存在"
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })

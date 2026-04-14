@@ -229,7 +229,7 @@ body{background:#edf2f7}
 
 .sidebar{width:250px;background:var(--primary);color:#fff;position:fixed;height:100%}
 .logo-container{padding:20px;border-bottom:1px solid rgba(255,255,255,.1)}
-.logo{display:flex;align-items:center;font-weight:700}
+.logo{display:flex;align-items:center;font-weight:700;white-space: nowrap;  }
 .logo i{margin-right:10px;color:var(--accent)}
 
 .nav-links a{display:flex;align-items:center;padding:12px 20px;color:rgba(255,255,255,.8);text-decoration:none}
