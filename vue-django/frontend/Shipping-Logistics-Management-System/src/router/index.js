@@ -16,6 +16,9 @@ import Cargo_management from '../views/cargo_management.vue'
 import Create_cargo from '../views/create_cargo.vue'
 import Edit_cargo from '../views/edit_cargo.vue'
 import Operator_update_profile from '../views/operator_update_profile.vue'
+import Order_management from '../views/order_management.vue'
+import Create_order from '../views/create_order.vue'
+import Edit_order from '../views/edit_order.vue'
 
 
 const routes = [
@@ -34,9 +37,10 @@ const routes = [
   { path: '/cargo', component:Cargo_management },
   { path: '/create-cargo', component: Create_cargo },
   {path: '/cargo/edit/:id',component: Edit_cargo },
-  { path: '/order', component: Operator },
-  { path: '/settings', component: Operator },
+  { path: '/order', component: Order_management },
+  { path: '/create-order', component: Create_order },
   {path: '/operator_update_profile',component:Operator_update_profile},
+  {path: '/order/edit/:id',component: Edit_order },
   
   // {path: '/appointer',component: () => import('../views/appointer.vue')},
   // {path: '/transporter',component: () => import('../views/transporter.vue')},

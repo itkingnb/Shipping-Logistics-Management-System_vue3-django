@@ -193,15 +193,22 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.app { display:flex; }
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  display: flex;
+}
 
 /* sidebar */
 .sidebar {
-  width:250px;
-  background:#1a3a5f;
-  color:white;
-  height:100vh;
-  padding:20px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
 }
 
 .logo { font-weight:bold; margin-bottom:20px; }

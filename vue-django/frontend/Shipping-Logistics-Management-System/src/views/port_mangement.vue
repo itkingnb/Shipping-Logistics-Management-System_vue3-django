@@ -105,9 +105,12 @@ const totalPages = ref(1)
 const hasNext = ref(false)
 const hasPrevious = ref(false)
 const user = reactive({ name: '', role: '', avatar: '' })
-
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  withCredentials: true,
+})
 const loadData = async (p = 1) => {
-  const res = await axios.get("/api/ports/", {
+  const res = await api.get("/api/ports/", {
     params: {
       page: p,
       keyword: keyword.value
@@ -128,7 +131,7 @@ const remove = async (id) => {
   if (!confirm("确定删除该港口吗？")) return
 
   try {
-    await axios.delete(`/api/delete-port/${id}/`)
+    await api.delete(`/api/delete-port/${id}/`)
     alert("删除成功")
     if (list.value.length === 1 && page.value > 1) {
         loadData(page.value - 1)
@@ -144,15 +147,36 @@ const remove = async (id) => {
 const go = (path) => {
   router.push(path)
 }
-
+const fixAvatar = (u) => { 
+  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
+  return u
+}
 onMounted(async () => {
   await loadData(1)
-  const userRes = await axios.get('/api/user_info/')
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
   Object.assign(user, userRes.data)
 })
 </script>
 
 <style>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  display: flex;
+}
+
+/* sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+}
 /* ===== layout ===== */
 .layout {
   display: flex;
@@ -160,12 +184,6 @@ onMounted(async () => {
   font-family: "Microsoft YaHei";
 }
 
-.sidebar {
-  width: 260px;
-  background: #1a3a5f;
-  color: white;
-  padding: 20px;
-}
 
 .sidebar a {
   display: block;

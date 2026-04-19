@@ -108,7 +108,10 @@ const user = reactive({ name: '', role: '', avatar: '' })
 const defaultAvatar = 'https://via.placeholder.com/40'
 
 const pageRange = ref([])
-
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  withCredentials: true,
+})
 const buildPageRange = (cur, total) => {
   const range = []
   const start = Math.max(1, cur - 2)
@@ -118,7 +121,7 @@ const buildPageRange = (cur, total) => {
 }
 
 const loadData = async (p = 1) => {
-  const res = await axios.get('/api/customers/', {
+  const res = await api.get('/api/customers/', {
     params: {
       page: p,
       keyword: keyword.value
@@ -147,18 +150,39 @@ const goEdit = (id) => {
 
 const deleteCustomer = async (id) => {
   if (!confirm('确定删除？')) return
-  await axios.delete(`/api/delete-customers/${id}/`)
+  await api.delete(`/api/delete-customers/${id}/`)
   loadData(page.value)
 }
-
+const fixAvatar = (u) => { 
+  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
+  return u
+}
 onMounted(async () => {
   await loadData(1)
-  const userRes = await axios.get('/api/user_info/')
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
   Object.assign(user, userRes.data)
 })
 </script>
 
 <style scoped>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  display: flex;
+}
+
+/* sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+}
 .layout { display:flex; }
 
 .sidebar {

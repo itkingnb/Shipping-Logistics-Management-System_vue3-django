@@ -200,12 +200,21 @@ onMounted(async () => {
 
 <style scoped>
 /* ====== 你原版 CSS 直接搬过来（这里省略不改风格） ====== */
+html, body {
+  margin: 0;
+  padding: 0;
+}
 
+.app {
+  display: flex;
+}
+
+/* sidebar */
 .sidebar {
-  width: 250px;
-  background: #1a3a5f;
-  color: white;
   position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
   height: 100vh;
 }
 

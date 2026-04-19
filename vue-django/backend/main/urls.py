@@ -28,4 +28,9 @@ urlpatterns = [
     path('edit-cargo/<int:cargo_id>/', views.edit_cargo),
     path('operator_update_profile/', views.operator_update_profile),
     path('operator_get_profile/', views.operator_get_profile),
+    path("orders/", views.orders_list),
+    path("create_order/", views.create_order_api),
+    path("order/<int:order_id>/", views.get_order_detail),
+    path("order/update/<int:order_id>/", views.update_order_api),
+    path("delete_order/<int:order_id>/", views.delete_order_api),
 ]

@@ -103,7 +103,10 @@ const hasPrevious = ref(false)
 
 const user = reactive({ name: '', role: '', avatar: '' })
 const defaultAvatar = "https://via.placeholder.com/40"
-
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  withCredentials: true,
+})
 /* ===== CSRF ===== */
 function getCookie(name) {
   let value = null
@@ -118,7 +121,7 @@ function getCookie(name) {
 
 /* ===== 加载数据 ===== */
 const loadData = async (p = 1) => {
-  const res = await axios.get("/api/cargos/", {
+  const res = await api.get("/api/cargos/", {
     params: {
       page: p,
       keyword: keyword.value
@@ -137,7 +140,7 @@ const remove = async (id) => {
   if (!confirm("确定删除？")) return
 
   try {
-    await axios.delete(`/api/delete-cargo/${id}/`, {
+    await api.delete(`/api/delete-cargo/${id}/`, {
       headers: {
         "X-CSRFToken": getCookie("csrftoken")
       },
@@ -158,15 +161,36 @@ const edit = (id) => {
 const go = (path) => {
   router.push(path)
 }
-
+const fixAvatar = (u) => { 
+  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
+  return u
+}
 onMounted(async () => {
   await loadData(1)
-  const res = await axios.get("/api/user_info/")
+  const res = await api.get("/api/user_info/")
+  user.value = fixAvatar(res.data)
   Object.assign(user, res.data)
 })
 </script>
 
 <style scoped>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  display: flex;
+}
+
+/* sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+}
 .app { display: flex; }
 
 /* sidebar */

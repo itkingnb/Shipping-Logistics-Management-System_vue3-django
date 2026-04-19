@@ -149,11 +149,14 @@ const back = () => {
 }
 
 /* ===== 用户信息 ===== */
+const fixAvatar = (u) => { 
+  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
+  return u
+}
 onMounted(async () => {
   try {
-    const res = await axios.get("/api/user_info/", {
-      withCredentials: true
-    })
+    const res = await axios.get("/api/user_info/")
+    user.value = fixAvatar(res.data)
     Object.assign(user, res.data)
   } catch (e) {
     console.log("用户信息获取失败")
@@ -162,16 +165,21 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
 .app {
   display: flex;
 }
 
-/* ===== sidebar ===== */
+/* sidebar */
 .sidebar {
-  width: 240px;
-  background: #1a3a5f;
-  color: white;
-  padding: 20px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
   height: 100vh;
 }
 

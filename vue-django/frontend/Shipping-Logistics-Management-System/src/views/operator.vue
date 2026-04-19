@@ -64,7 +64,10 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import * as echarts from 'echarts'
-
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  withCredentials: true,
+})
 const pieRef = ref(null)
 const lineRef = ref(null)
 const barRef = ref(null)
@@ -146,9 +149,12 @@ function initCharts(data) {
 
   requestAnimationFrame(tryInit)
 }
-
+const fixAvatar = (u) => { 
+  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
+  return u
+}
 onMounted(async () => {
-  const res = await axios.get('/operator/report')
+  const res = await api.get('/operator/report')
   const data = res.data
 
   Object.assign(kpi, data.kpi)
@@ -156,17 +162,36 @@ onMounted(async () => {
   await nextTick()
   initCharts(data)
 
-  const userRes = await axios.get('/api/user_info/')
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
   Object.assign(user, userRes.data)
+  
+  console.log(user)
 })
 </script>
 
 <style scoped>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Microsoft YaHei',sans-serif}
-:root{--primary:#1a3a5f;--accent:#3182ce;--light:#f7fafc;--dark:#2d3748;--success:#38a169;--danger:#e53e3e;--gray:#a0aec0}
-body{background:#edf2f7}
 
-.sidebar{width:250px;background:var(--primary);color:#fff;position:fixed;height:100%}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  display: flex;
+}
+
+/* sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+}
+/* *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Microsoft YaHei',sans-serif} */
+:root{--primary:#1a3a5f;--accent:#3182ce;--light:#f7fafc;--dark:#2d3748;--success:#38a169;--danger:#e53e3e;--gray:#a0aec0}
 .logo-container{padding:20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .logo{display:flex;align-items:center;font-weight:700;white-space: nowrap;  }
 .logo i{margin-right:10px;color:var(--accent)}

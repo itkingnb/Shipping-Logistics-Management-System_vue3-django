@@ -146,7 +146,10 @@ const router = useRouter()
 
 axios.defaults.baseURL = 'http://127.0.0.1:8000'
 axios.defaults.withCredentials = true
-
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  withCredentials: true,
+})
 const users = ref([])
 const keyword = ref('')
 
@@ -172,10 +175,11 @@ const loadUser = () => {
   if (u) {
     const parsed = JSON.parse(u)
     if (parsed.avatar) {
-      // parsed.avatar = 'http://127.0.0.1:8000/media/' + parsed.avatar
+      parsed.avatar = 'http://127.0.0.1:8000/' + parsed.avatar
     }
     user.value = parsed
   }
+  // console.log(user)
 }
 
 const statusClass = (status) => {
@@ -186,7 +190,7 @@ const statusClass = (status) => {
 
 const fetchUsers = async (page = 1) => {
   try {
-    const res = await axios.get('administrator/user_management/', {
+    const res = await api.get('administrator/user_management/', {
       params: { keyword: keyword.value, page }
     })
     if (res.data.success) {
@@ -203,7 +207,7 @@ const search = () => fetchUsers(1)
 const toggle = async (u, action) => {
   if (!confirm(`确定要${action}用户 ${u.username} 吗？`)) return
   try {
-    const res = await axios.post(
+    const res = await api.post(
       `/administrator/toggle_user_status/${u.id}/`,
       { action }
     )
@@ -225,9 +229,23 @@ onMounted(() => {
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Microsoft YaHei',sans-serif}
 :root{--primary:#1a3a5f;--accent:#3182ce;--light:#f7fafc;--dark:#2d3748;--success:#38a169;--danger:#e53e3e;--gray:#a0aec0}
-body{background:#edf2f7}
+html, body {
+  margin: 0;
+  padding: 0;
+}
 
-.sidebar{width:250px;background:var(--primary);color:#fff;position:fixed;height:100%}
+.app {
+  display: flex;
+}
+
+/* sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+}
 .logo-container{padding:20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .logo{display:flex;align-items:center;font-weight:700;white-space: nowrap;  }
 .logo i{margin-right:10px;color:var(--accent)}

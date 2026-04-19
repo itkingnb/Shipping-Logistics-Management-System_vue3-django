@@ -161,16 +161,21 @@ onMounted(async () => {
 })
 </script>
 <style scoped>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
 .app {
   display: flex;
 }
 
 /* sidebar */
 .sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
   width: 220px;
-  background: #1a3a5f;
-  color: white;
-  padding: 20px;
   height: 100vh;
 }
 

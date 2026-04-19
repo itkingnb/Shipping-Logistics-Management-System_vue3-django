@@ -658,13 +658,27 @@ def port_list_api(request):
         })
 
     return JsonResponse({
+    # ===== 旧结构（完全保留）=====
+    "list": data,
+    "page": page_obj.number,
+    "total_pages": paginator.num_pages,
+    "total": paginator.count,
+    "has_next": page_obj.has_next(),
+    "has_previous": page_obj.has_previous(),
+
+    # ===== 新结构（新增，不影响旧代码）=====
+    "success": True,
+    "data": {
         "list": data,
-        "page": page_obj.number,
-        "total_pages": paginator.num_pages,
-        "total": paginator.count,
-        "has_next": page_obj.has_next(),
-        "has_previous": page_obj.has_previous(),
-    })
+        "pagination": {
+            "page": page_obj.number,
+            "total_pages": paginator.num_pages,
+            "total": paginator.count,
+            "has_next": page_obj.has_next(),
+            "has_previous": page_obj.has_previous(),
+        }
+    }
+})
 
 import json
 from django.http import JsonResponse
@@ -746,11 +760,24 @@ def cargo_list(request):
         })
 
     return JsonResponse({
+        # ===== 老结构（不动）=====
         "list": data,
         "page": page,
         "total_pages": paginator.num_pages,
         "has_next": page_obj.has_next(),
-        "has_previous": page_obj.has_previous()
+        "has_previous": page_obj.has_previous(),
+
+        # ===== 新结构（新增）=====
+        "success": True,
+        "data": {
+            "list": data,
+            "pagination": {
+                "page": page,
+                "total_pages": paginator.num_pages,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+            }
+        }
     })
 
 from django.views.decorators.csrf import csrf_exempt
@@ -815,6 +842,78 @@ def delete_cargo(request, id):
         Cargo.objects.filter(cargo_id=id).delete()
         return JsonResponse({"msg": "ok"})
     
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+
+from django.db.models import Case, When, Value, IntegerField, Q
+
+def get_orders_sorted_from_view(keyword=''):
+    from .models import Order
+
+    qs = Order.objects.all()
+
+    # 🔥 状态排序权重
+    qs = qs.annotate(
+        status_order=Case(
+            When(order_status='草稿', then=Value(0)),
+            When(order_status='待指派', then=Value(1)),
+            When(order_status='已指派', then=Value(2)),
+            When(order_status='运输中', then=Value(3)),
+            When(order_status='已完成', then=Value(4)),
+            default=Value(5),
+            output_field=IntegerField()
+        )
+    ).order_by('status_order', '-created_at')  # ⭐先按状态，再按时间
+
+    # 🔍 搜索
+    if keyword:
+        qs = qs.filter(
+            Q(customer__customer_name__icontains=keyword) |
+            Q(origin_port__icontains=keyword) |
+            Q(destination_port__icontains=keyword) |
+            Q(order_status__icontains=keyword)
+        )
+
+    # 转 JSON
+    data = []
+    for o in qs:
+        data.append({
+            'order_id': o.order_id,
+            'customer_name': o.customer.customer_name if o.customer else '',
+            'origin_port_name': o.origin_port,
+            'destination_port_name': o.destination_port,
+            'order_status': o.order_status,
+            'total_amount': float(o.total_amount),
+            'created_at': o.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'updated_at': o.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
+
+    return data
+def orders_list(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({'success': False, 'message': '未登录'}, status=401)
+
+    page_number = request.GET.get('page', 1)
+    keyword = request.GET.get('keyword', '').strip()
+
+    orders_data = get_orders_sorted_from_view(keyword)
+
+    paginator = Paginator(orders_data, 10)
+    page_obj = paginator.get_page(page_number)
+
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'list': list(page_obj.object_list),
+            'current_page': page_obj.number,
+            'total_pages': paginator.num_pages,
+            'total_count': paginator.count,
+            'has_previous': page_obj.has_previous(),
+            'has_next': page_obj.has_next(),
+        }
+    })
+
 
 
 from django.http import JsonResponse
@@ -824,56 +923,59 @@ import json
 
 @csrf_exempt
 @transaction.atomic
-def create_order(request):
+def create_order_api(request):
+
     if request.method != "POST":
         return JsonResponse({"error": "仅支持 POST"}, status=405)
 
     try:
         data = json.loads(request.body)
 
+        # ===== 用户 =====
         user_info = request.session.get('user_info')
         if not user_info:
             return JsonResponse({"error": "未登录"}, status=401)
 
         created_by = User.objects.get(username=user_info['name'])
 
+        # ===== 参数提取（必须在校验前）=====
         origin_port_id = data.get('origin_port')
         destination_port_id = data.get('destination_port')
         customer_id = data.get('customer')
+        cargo_list = data.get("cargo_list", [])
         is_draft = data.get('is_draft', False)
 
-        # ===== 校验 =====
+        # ===== 参数校验 =====
+        if not customer_id:
+            return JsonResponse({"error": "请选择客户"}, status=400)
+
+        if not origin_port_id or not destination_port_id:
+            return JsonResponse({"error": "请选择港口"}, status=400)
+
         if origin_port_id == destination_port_id:
             return JsonResponse({"error": "始发港和目的港不能相同"}, status=400)
 
+        if not cargo_list:
+            return JsonResponse({"error": "请至少添加一个货物"}, status=400)
+
         # ===== 查港口 =====
-        origin_port_name = None
-        destination_port_name = None
+        origin_port = Port.objects.filter(port_id=origin_port_id).first()
+        destination_port = Port.objects.filter(port_id=destination_port_id).first()
 
-        if origin_port_id:
-            port = Port.objects.filter(port_id=origin_port_id).first()
-            if port:
-                origin_port_name = port.port_name
-
-        if destination_port_id:
-            port = Port.objects.filter(port_id=destination_port_id).first()
-            if port:
-                destination_port_name = port.port_name
+        origin_port_name = origin_port.port_name if origin_port else None
+        destination_port_name = destination_port.port_name if destination_port else None
 
         # ===== 客户 =====
-        customer = None
-        if customer_id:
-            customer = Customer.objects.filter(customer_id=customer_id).first()
+        customer = Customer.objects.filter(customer_id=customer_id).first()
 
         # ===== 状态 =====
         order_status = "草稿" if is_draft else "待指派"
 
-        # ===== 货物 =====
-        cargo_list = data.get("cargo_list", [])
-
         # ===== 库存检查 =====
         for item in cargo_list:
-            cargo = Cargo.objects.select_for_update().get(cargo_id=item["cargo_id"])
+            cargo = Cargo.objects.select_for_update().get(
+                cargo_id=item["cargo_id"]
+            )
             if cargo.inventory < int(item["quantity"]):
                 return JsonResponse({
                     "error": f"货物【{cargo.cargo_name}】库存不足（剩余 {cargo.inventory}）"
@@ -891,15 +993,16 @@ def create_order(request):
 
         total_amount = 0
 
+        # ===== 写入订单货物 + 扣库存 =====
         for item in cargo_list:
-            cargo = Cargo.objects.select_for_update().get(cargo_id=item["cargo_id"])
+            cargo = Cargo.objects.select_for_update().get(
+                cargo_id=item["cargo_id"]
+            )
             quantity = int(item["quantity"])
 
-            # 扣库存
             cargo.inventory -= quantity
             cargo.save()
 
-            # 订单货物
             OrderCargo.objects.create(
                 cargo=cargo,
                 order=order,
@@ -913,12 +1016,168 @@ def create_order(request):
 
         return JsonResponse({
             "message": "订单创建成功",
-            "order_id": order.id
+            "order_id": order.order_id
         })
 
     except Exception as e:
         print("❌ 创建订单失败:", e)
         return JsonResponse({"error": str(e)}, status=500)
+    
+def get_order_detail(request, order_id):
+    order = Order.objects.filter(order_id=order_id).first()
+    if not order:
+        return JsonResponse({"error": "订单不存在"}, status=404)
+
+    cargos = OrderCargo.objects.filter(order=order)
+
+    cargo_list = []
+    for oc in cargos:
+        cargo_list.append({
+            "cargo_id": oc.cargo.cargo_id,
+            "cargo_name": oc.cargo.cargo_name,
+            "quantity": oc.quantity
+        })
+
+    return JsonResponse({
+        "order_id": order.order_id,
+        "customer": order.customer.customer_id if order.customer else None,
+        "origin_port": Port.objects.get(port_name=order.origin_port).port_id if order.origin_port else None,
+        "destination_port": Port.objects.get(port_name=order.destination_port).port_id if order.destination_port else None,
+        "cargo_list": cargo_list
+    })
+
+@csrf_exempt
+@transaction.atomic
+def update_order_api(request, order_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "仅支持 POST"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+
+        order = Order.objects.select_for_update().filter(order_id=order_id).first()
+        if not order:
+            return JsonResponse({"error": "订单不存在"}, status=404)
+
+        if order.order_status not in ["草稿", "待指派"]:
+            return JsonResponse({"error": "该订单不可修改"}, status=400)
+
+        customer_id = data.get("customer")
+        origin_port_id = data.get("origin_port")
+        destination_port_id = data.get("destination_port")
+        cargo_list = data.get("cargo_list", [])
+        is_draft = data.get("is_draft", False)
+
+        if not customer_id:
+            return JsonResponse({"error": "请选择客户"}, status=400)
+
+        if not origin_port_id or not destination_port_id:
+            return JsonResponse({"error": "请选择港口"}, status=400)
+
+        if origin_port_id == destination_port_id:
+            return JsonResponse({"error": "始发港和目的港不能相同"}, status=400)
+
+        if not cargo_list:
+            return JsonResponse({"error": "请添加货物"}, status=400)
+
+        customer = Customer.objects.filter(customer_id=customer_id).first()
+        origin_port = Port.objects.filter(port_id=origin_port_id).first()
+        destination_port = Port.objects.filter(port_id=destination_port_id).first()
+
+        # ===== 还原库存 =====
+        old_items = OrderCargo.objects.filter(order=order)
+        for oc in old_items:
+            cargo = Cargo.objects.select_for_update().get(cargo_id=oc.cargo.cargo_id)
+            cargo.inventory += oc.quantity
+            cargo.save()
+
+        old_items.delete()
+
+        # ===== 检查库存 =====
+        for item in cargo_list:
+            cargo = Cargo.objects.select_for_update().get(cargo_id=item["cargo_id"])
+            if cargo.inventory < int(item["quantity"]):
+                return JsonResponse({
+                    "error": f"{cargo.cargo_name} 库存不足"
+                }, status=400)
+
+        # ===== 写入新数据 =====
+        total_amount = 0
+
+        for item in cargo_list:
+            cargo = Cargo.objects.select_for_update().get(cargo_id=item["cargo_id"])
+            qty = int(item["quantity"])
+
+            cargo.inventory -= qty
+            cargo.save()
+
+            OrderCargo.objects.create(
+                order=order,
+                cargo=cargo,
+                quantity=qty
+            )
+
+            total_amount += cargo.cargo_amount * qty
+
+        order.customer = customer
+        order.origin_port = origin_port.port_name
+        order.destination_port = destination_port.port_name
+        order.order_status = "草稿" if is_draft else "待指派"
+        order.total_amount = total_amount
+        order.save()
+
+        return JsonResponse({"message": "修改成功"})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+@transaction.atomic
+def delete_order_api(request, order_id):
+
+    if request.method != "DELETE":
+        return JsonResponse({"error": "仅支持 DELETE"}, status=405)
+
+    try:
+        # ===== 登录校验 =====
+        user_info = request.session.get('user_info')
+        if not user_info:
+            return JsonResponse({"error": "未登录"}, status=401)
+
+        # ===== 查订单 =====
+        order = get_object_or_404(Order, order_id=order_id)
+
+        # ❗可选：限制已完成订单不能删除
+        if order.order_status == "已完成":
+            return JsonResponse({"error": "已完成订单不可删除"}, status=400)
+
+        # ===== 回滚库存（加锁）=====
+        order_cargos = OrderCargo.objects.select_for_update().filter(order=order)
+
+        for oc in order_cargos:
+            cargo = Cargo.objects.select_for_update().get(
+                cargo_id=oc.cargo.cargo_id
+            )
+            cargo.inventory += oc.quantity
+            cargo.save()
+
+        # ===== 删除关联表 =====
+        order_cargos.delete()
+
+        # ===== 删除订单 =====
+        order.delete()
+
+        return JsonResponse({
+            "message": "订单删除成功"
+        })
+
+    except Exception as e:
+        print("❌ 删除订单失败：", e)
+        return JsonResponse({
+            "error": str(e)
+        }, status=500)
+
+
     
 from django.http import JsonResponse
 
@@ -967,14 +1226,14 @@ from django.views.decorators.csrf import csrf_exempt
 def operator_update_profile(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "非法请求"})
-
-    user_id = request.session.get('user_id')
+    user_info = request.session.get('user_info')
+    user_id=user_info['id']
     if not user_id:
         return JsonResponse({"success": False, "message": "未登录"})
 
     try:
         user = User.objects.get(user_id=user_id)
-
+        user.user_id=user_id
         # ===== 获取表单数据 =====
         username = request.POST.get("username", "").strip()
         phone = request.POST.get("phone", "").strip()

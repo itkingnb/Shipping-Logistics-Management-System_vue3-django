@@ -109,7 +109,10 @@ const file = ref(null)
 const preview = ref('')
 const defaultAvatar = '/avatar.png'
 const fileInput = ref(null)
-
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000",
+  withCredentials: true,
+})
 // 跳转
 const go = (path) => router.push(path)
 
@@ -123,10 +126,11 @@ const fixAvatar = (u) => {
 
 // 加载数据（改接口）
 const load = async () => {
-  const res = await axios.get('/api/operator_get_profile/')
+  const res = await api.get('/api/operator_get_profile/')
   if (res.data.success) {
     user.value = fixAvatar(res.data.data)
   }
+  console.log(user)
 }
 
 // 选文件
@@ -148,7 +152,7 @@ const submit = async () => {
     form.append('avatar', file.value)
   }
 
-  const res = await axios.post('/api/operator_update_profile/', form)
+  const res = await api.post('/api/operator_update_profile/', form)
 
   if (res.data.success) {
     alert('更新成功')
@@ -166,3 +170,22 @@ const logout = () => {
 
 onMounted(load)
 </script>
+<style scoped>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  display: flex;
+}
+
+/* sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+}
+</style>

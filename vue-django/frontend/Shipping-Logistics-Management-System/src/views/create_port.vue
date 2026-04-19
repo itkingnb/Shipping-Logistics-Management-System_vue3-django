@@ -173,7 +173,23 @@ onMounted(async () => {
 
 <style scoped>
 /* 直接复用你原来的 CSS（略微精简） */
+html, body {
+  margin: 0;
+  padding: 0;
+}
 
+.app {
+  display: flex;
+}
+
+/* sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 100vh;
+}
 .sidebar { width:250px;background:#1a3a5f;color:#fff;position:fixed;height:100% }
 .main-content { margin-left:250px;padding:20px;background:#edf2f7 }
 
