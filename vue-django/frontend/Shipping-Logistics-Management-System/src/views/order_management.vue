@@ -3,15 +3,20 @@
 
     <!-- ===== 侧边栏 ===== -->
     <div class="sidebar">
-      <div class="logo">航运物流公司管理系统</div>
+      <div class="logo-container">
+        <div class="logo">
+          <i class="fas fa-ship"></i>
+          <span class="logo-text">航运物流公司管理系统</span>
+        </div>
+      </div>
 
-      <ul>
-        <li @click="go('/operator/report')">报表统计</li>
-        <li @click="go('/operator/customer')">客户管理</li>
-        <li @click="go('/operator/port')">港口管理</li>
-        <li @click="go('/operator/cargo')">货物管理</li>
-        <li class="active">订单管理</li>
-        <li @click="go('/operator/profile')">个人设置</li>
+      <ul class="nav-links">
+        <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
+        <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
+        <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
+        <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
+        <li><router-link to="/order" class="active"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
+        <li><router-link to="/operator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -117,12 +122,7 @@
 import { ref, reactive,onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  withCredentials: true,
-})
-
-
+import { api,fixAvatar } from "../utils/common.js"
 
 const router = useRouter()
 
@@ -133,27 +133,11 @@ const keyword = ref('')
 
 const user = reactive({ name: '', role: '', avatar: '' })
 
-/* ===== 头像处理 ===== */
-const fixAvatar = (u) => {
-    return 'http://127.0.0.1:8000' + u.avatar
-}
-
 /* ===== 用户 ===== */
 const loadUser = async () => {
-  const res = await api.get("/api/user_info/")
-
-  console.log("返回原始数据：", res.data)
-
-  const data = res.data
-
-  if (typeof data !== "object") {
-    console.error("接口返回不是JSON，而是：", typeof data)
-    return
-  }
-
-  data.avatar = fixAvatar(data)
-  Object.assign(user, data)
-
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
+  Object.assign(user, userRes.data)
   console.log(user)
 }
 
@@ -166,9 +150,6 @@ const load = async () => {
     }
   })
 
-//   console.log('接口返回：', res.data)
-
-  // ⭐ 自动兼容两种后端结构
   const data = res.data.data || res.data
 
   orders.value = data.list || []
@@ -235,47 +216,83 @@ html, body {
 }
 
 /* ===== 布局 ===== */
-.layout {
+.app {
   display: flex;
-  height: 100vh;
 }
 
-/* ===== 侧边栏 ===== */
+/* ===== 侧边栏整体 ===== */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px;
+  width: 240px;
   height: 100vh;
   background: #1a3a5f;
-  color: white;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== logo ===== */
+.logo-container {
   padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-.sidebar .logo {
-  font-size: 18px;
+.logo {
+  display: flex;
+  align-items: center;
   font-weight: bold;
-  margin-bottom: 20px;
 }
 
-.sidebar ul {
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
   list-style: none;
-  padding: 0;
+  padding: 10px 0;
+  margin: 0;
 }
 
-.sidebar li {
-  padding: 12px;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: 0.2s;
+/* 每一项 */
+.nav-links li {
+  width: 100%;
 }
 
-.sidebar li:hover {
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
   background: rgba(255,255,255,0.1);
+  color: #fff;
 }
 
-.sidebar .active {
-  background: #3182ce;
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
 }
 
 /* ===== 主体 ===== */

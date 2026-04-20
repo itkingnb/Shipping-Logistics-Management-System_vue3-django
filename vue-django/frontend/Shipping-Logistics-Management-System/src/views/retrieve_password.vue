@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 
 const username = ref('')
@@ -20,7 +20,7 @@ const handleSubmit = async () => {
   }
 
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/retrieve_password/', {
+    const res = await api.post('http://127.0.0.1:8000/api/retrieve_password/', {
       username: username.value,
       password: password.value,
       password2: password2.value

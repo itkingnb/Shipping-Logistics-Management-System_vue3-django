@@ -11,11 +11,11 @@
 
       <ul class="nav-links">
         <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
-        <li><router-link to="/customer"><i class="fas fa-anchor"></i><span class="link-text">客户管理</span></router-link></li>
-        <li><a class="active"><i class="fas fa-tachometer-alt"></i><span class="link-text">港口管理</span></a></li>
+        <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
+        <li><router-link to="/port" class="active"><i class="fas fa-user-tag"></i><span class="link-text">港口管理</span></router-link></li>
         <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
         <li><router-link to="/order"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
-        <li><router-link to="/settings"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
+        <li><router-link to="/operator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -95,9 +95,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import axios from "axios"
 import { useRouter } from "vue-router"
-
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
-
 const list = ref([])
 const keyword = ref("")
 const page = ref(1)
@@ -105,10 +104,6 @@ const totalPages = ref(1)
 const hasNext = ref(false)
 const hasPrevious = ref(false)
 const user = reactive({ name: '', role: '', avatar: '' })
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  withCredentials: true,
-})
 const loadData = async (p = 1) => {
   const res = await api.get("/api/ports/", {
     params: {
@@ -116,7 +111,6 @@ const loadData = async (p = 1) => {
       keyword: keyword.value
     }
   })
-//   console.log(res.data)
   list.value = res.data.list
   page.value = res.data.page
   totalPages.value = res.data.total_pages
@@ -147,10 +141,7 @@ const remove = async (id) => {
 const go = (path) => {
   router.push(path)
 }
-const fixAvatar = (u) => { 
-  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
-  return u
-}
+
 onMounted(async () => {
   await loadData(1)
   const userRes = await api.get('/api/user_info/')
@@ -169,36 +160,94 @@ html, body {
   display: flex;
 }
 
-/* sidebar */
+/* ===== 侧边栏整体 ===== */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px;
+  width: 240px;
   height: 100vh;
-}
-/* ===== layout ===== */
-.layout {
+  background: #1a3a5f;
+  color: #fff;
   display: flex;
-  min-height: 100vh;
-  font-family: "Microsoft YaHei";
+  flex-direction: column;
 }
 
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
 
-.sidebar a {
-  display: block;
-  color: white;
-  padding: 10px;
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
+
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
   text-decoration: none;
+
+  transition: all 0.2s;
 }
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
+}
+/**/
 
 .main-content {
-  flex: 1;
-  background: #edf2f7;
-  padding: 20px;
+  flex:1;
+  padding:20px;
+  margin-left:250px;
 }
 
 /* ===== header ===== */
+.header {
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:20px;
+}
 .header h1 {
   color: #1a3a5f;
 }
@@ -216,7 +265,7 @@ html, body {
 .search-input {
   flex: 1;
   padding: 10px;
-  border-radius: 8px;
+  /* border-radius: 8px; */
   border: 1px solid #ddd;
 }
 
@@ -309,15 +358,4 @@ html, body {
   border-color: #007bff;
   cursor: default;
 }
-.nav-links {
-  list-style: none;   /* 去掉圆点 */
-  padding: 0;         /* 去掉默认缩进 */
-  margin: 0;
-}
-
-.nav-links li {
-  list-style: none;   /* 双保险 */
-}
-.logo{display:flex;align-items:center;font-weight:700;white-space: nowrap;  }
-.logo i{margin-right:10px;color:var(--accent)}
 </style>

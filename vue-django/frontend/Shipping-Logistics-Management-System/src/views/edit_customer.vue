@@ -11,12 +11,12 @@
       </div>
 
       <ul class="nav-links">
-        <li><router-link to="/operator">报表统计</router-link></li>
-        <li><router-link to="/customer" class="active">客户管理</router-link></li>
-        <li><router-link to="/port">港口管理</router-link></li>
-        <li><router-link to="/cargo">货物管理</router-link></li>
-        <li><router-link to="/order">订单管理</router-link></li>
-        <li><router-link to="/settings">系统设置</router-link></li>
+        <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
+        <li><a class="active"><i class="fas fa-tachometer-alt"></i><span class="link-text">客户管理</span></a></li>
+        <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
+        <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
+        <li><router-link to="/order"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
+        <li><router-link to="/settings"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -113,6 +113,7 @@
 import { reactive, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
+import { api,fixAvatar } from "../utils/common.js"
 
 const route = useRoute()
 const router = useRouter()
@@ -147,7 +148,7 @@ const showMsg = (text, type = 'success') => {
 
 /** 获取客户详情 */
 const loadCustomer = async () => {
-  const res = await axios.get(`/api/customers/${id}/`)
+  const res = await api.get(`/api/customers/${id}/`)
   Object.assign(form, res.data)
 }
 
@@ -164,7 +165,7 @@ const submit = async () => {
       return
     }
 
-    await axios.put(`/api/edit-customers/${id}/`, form)
+    await api.put(`/api/edit-customers/${id}/`, form)
 
     showMsg('更新成功')
 
@@ -180,8 +181,7 @@ const submit = async () => {
 /** 删除 */
 const deleteCustomer = async () => {
   if (!confirm('确定删除该客户？')) return
-
-  await axios.delete(`/api/delete-customers/${id}/`)
+  await api.delete(`/api/delete-customers/${id}/`)
   router.push('/customer')
 }
 
@@ -192,9 +192,10 @@ const reset = () => {
 
 onMounted(async () => {
   await loadCustomer()
-
-  const userRes = await axios.get('/api/user_info/')
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
   Object.assign(user, userRes.data)
+  console.log(user)
 })
 </script>
 
@@ -209,13 +210,79 @@ html, body {
   display: flex;
 }
 
-/* sidebar */
+/* ===== 侧边栏整体 ===== */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px;
+  width: 240px;
   height: 100vh;
+  background: #1a3a5f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
+
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
 }
 
 .main-content {

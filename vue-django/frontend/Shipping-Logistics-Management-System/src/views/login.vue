@@ -2,8 +2,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-axios.defaults.baseURL = 'http://127.0.0.1:8000'
-axios.defaults.withCredentials = true
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 const username = ref('')
 const password = ref('')
@@ -14,7 +13,7 @@ const showPassword = ref(false)
 // 登录
 const handleLogin = async () => {
   try {
-    const res = await axios.post('/api/login/', {
+    const res = await api.post('/api/login/', {
       username: username.value,
       password: password.value,
       remember: remember.value,

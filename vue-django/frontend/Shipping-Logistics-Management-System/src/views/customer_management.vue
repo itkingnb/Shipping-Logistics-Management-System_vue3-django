@@ -11,11 +11,11 @@
 
       <ul class="nav-links">
         <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
-        <li><a class="active"><i class="fas fa-tachometer-alt"></i><span class="link-text">客户管理</span></a></li>
-        <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
+        <li><router-link to="/customer" class="active"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
+        <li><router-link to="/port"><i class="fas fa-user-tag"></i><span class="link-text">港口管理</span></router-link></li>
         <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
         <li><router-link to="/order"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
-        <li><router-link to="/settings"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
+        <li><router-link to="/operator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -27,7 +27,7 @@
         <h1>客户管理</h1>
 
         <div class="user-info">
-          <img :src="user.avatar || defaultAvatar" />
+          <img :src="user.avatar" />
           <div>
             <div>{{ user.name }}</div>
             <div style="font-size:12px;color:#999">{{ user.role }}</div>
@@ -97,7 +97,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 const list = ref([])
 const page = ref(1)
@@ -108,10 +108,6 @@ const user = reactive({ name: '', role: '', avatar: '' })
 const defaultAvatar = 'https://via.placeholder.com/40'
 
 const pageRange = ref([])
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  withCredentials: true,
-})
 const buildPageRange = (cur, total) => {
   const range = []
   const start = Math.max(1, cur - 2)
@@ -153,15 +149,13 @@ const deleteCustomer = async (id) => {
   await api.delete(`/api/delete-customers/${id}/`)
   loadData(page.value)
 }
-const fixAvatar = (u) => { 
-  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
-  return u
-}
+
 onMounted(async () => {
   await loadData(1)
   const userRes = await api.get('/api/user_info/')
   user.value = fixAvatar(userRes.data)
   Object.assign(user, userRes.data)
+  console.log(user)
 })
 </script>
 
@@ -175,21 +169,80 @@ html, body {
   display: flex;
 }
 
-/* sidebar */
+
+/* ===== 侧边栏整体 ===== */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px;
+  width: 240px;
   height: 100vh;
+  background: #1a3a5f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
 }
-.layout { display:flex; }
 
-.sidebar {
-  width:250px;
-  background:#1a3a5f;
-  color:white;
-  height:100vh;
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
+
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
 }
 
 .main-content {

@@ -10,7 +10,7 @@
       </div>
 
       <ul class="nav-links">
-        <li><router-link to="/operator"class="active"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
+        <li><router-link to="/operator" class="active"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
         <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
         <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
         <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
@@ -64,10 +64,7 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import * as echarts from 'echarts'
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  withCredentials: true,
-})
+import { api,fixAvatar } from "../utils/common.js"
 const pieRef = ref(null)
 const lineRef = ref(null)
 const barRef = ref(null)
@@ -149,10 +146,6 @@ function initCharts(data) {
 
   requestAnimationFrame(tryInit)
 }
-const fixAvatar = (u) => { 
-  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
-  return u
-}
 onMounted(async () => {
   const res = await api.get('/operator/report')
   const data = res.data
@@ -165,7 +158,6 @@ onMounted(async () => {
   const userRes = await api.get('/api/user_info/')
   user.value = fixAvatar(userRes.data)
   Object.assign(user, userRes.data)
-  
   console.log(user)
 })
 </script>
@@ -182,23 +174,81 @@ html, body {
   display: flex;
 }
 
-/* sidebar */
+/* ===== 侧边栏整体 ===== */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px;
+  width: 240px;
   height: 100vh;
+  background: #1a3a5f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
 }
-/* *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Microsoft YaHei',sans-serif} */
-:root{--primary:#1a3a5f;--accent:#3182ce;--light:#f7fafc;--dark:#2d3748;--success:#38a169;--danger:#e53e3e;--gray:#a0aec0}
-.logo-container{padding:20px;border-bottom:1px solid rgba(255,255,255,.1)}
-.logo{display:flex;align-items:center;font-weight:700;white-space: nowrap;  }
-.logo i{margin-right:10px;color:var(--accent)}
 
-.nav-links a{display:flex;align-items:center;padding:12px 20px;color:rgba(255,255,255,.8);text-decoration:none}
-.nav-links a:hover,.nav-links a.active{background:rgba(255,255,255,.1);color:#fff;border-left:4px solid var(--accent)}
-.nav-links i{margin-right:10px}
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
+
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
+}
+/**/
 
 .main-content{margin-left:250px;padding:20px}
 
@@ -225,15 +275,6 @@ html, body {
 .chart-row{display:grid;grid-template-columns:2fr 1fr;gap:20px}
 .chart{height:300px}    
 * { margin:0; padding:0; box-sizing:border-box }
-
-.layout { display:flex }
-
-.sidebar {
-  width:250px;
-  background:#1a3a5f;
-  color:white;
-  height:100vh;
-}
 
 .main-content {
   flex:1;

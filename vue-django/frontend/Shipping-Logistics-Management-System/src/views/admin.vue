@@ -10,9 +10,9 @@
       </div>
 
       <ul class="nav-links">
-        <li><a class="active"><i class="fas fa-tachometer-alt"></i><span class="link-text">数据统计</span></a></li>
-        <li><a @click="go('/user_management')"><i class="fas fa-user-tag"></i><span class="link-text">用户管理</span></a></li>
-        <li><a @click="go('/administrator_update_profile')"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></a></li>
+        <li><router-link to="/admin" class="active"><i class="fas fa-tachometer-alt"></i><span class="link-text">数据统计</span></router-link></li>
+        <li><router-link to="/user_management"><i class="fas fa-user-tag"></i><span class="link-text">用户管理</span></router-link></li>
+        <li><router-link to="/administrator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
     
@@ -91,7 +91,7 @@ import * as echarts from 'echarts'
 import { ref, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 
 // ===== 用户 =====
@@ -102,19 +102,11 @@ const user = ref({
 })
 
 // 页面加载时读取
-const loadUser = () => {
-  const u = localStorage.getItem('user')
-  if (u) {
-    const parsed = JSON.parse(u)
-
-    // 👇 如果是相对路径要拼接
-    if (parsed.avatar) {
-      // parsed.avatar = 'http://127.0.0.1:8000/media/' + parsed.avatar
-    }
-
-    user.value = parsed
-  }
-  console.log(user.value.avatar)
+const loadUser = async () => {
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
+  Object.assign(user, userRes.data)
+  console.log(user)
 }
 
 // 本地默认头像（避免外链报错）
@@ -186,7 +178,7 @@ const initCharts = (data) => {
 // ===== 获取数据 =====
 const loadData = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/dashboard/')
+    const res = await api.get('http://127.0.0.1:8000/api/dashboard/')
 
     if (res.data.success) {
       const data = res.data.data
@@ -218,18 +210,90 @@ onMounted(() => {
 </script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Microsoft YaHei',sans-serif}
-:root{--primary:#1a3a5f;--accent:#3182ce;--light:#f7fafc;--dark:#2d3748;--success:#38a169;--danger:#e53e3e;--gray:#a0aec0}
-body{background:#edf2f7}
+html, body {
+  margin: 0;
+  padding: 0;
+}
 
-.sidebar{width:250px;background:var(--primary);color:#fff;position:fixed;height:100%}
-.logo-container{padding:20px;border-bottom:1px solid rgba(255,255,255,.1)}
-.logo{display:flex;align-items:center;font-weight:700}
-.logo i{margin-right:10px;color:var(--accent)}
+/* ===== 布局 ===== */
+.app {
+  display: flex;
+}
 
-.nav-links a{display:flex;align-items:center;padding:12px 20px;color:rgba(255,255,255,.8);text-decoration:none}
-.nav-links a:hover,.nav-links a.active{background:rgba(255,255,255,.1);color:#fff;border-left:4px solid var(--accent)}
-.nav-links i{margin-right:10px}
+/* ===== 侧边栏整体 ===== */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+  background: #1a3a5f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
+
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
+}
 
 .main-content{margin-left:250px;padding:20px}
 

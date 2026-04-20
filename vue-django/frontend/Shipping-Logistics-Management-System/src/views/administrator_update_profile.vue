@@ -10,9 +10,9 @@
       </div>
 
       <ul class="nav-links">
-        <li><a @click="go('/admin')"><i class="fas fa-tachometer-alt"></i><span>数据统计</span></a></li>
-        <li><a @click="go('/user_management')"><i class="fas fa-user-tag"></i><span>用户管理</span></a></li>
-        <li><a class="active"><i class="fas fa-cog"></i><span>系统设置</span></a></li>
+        <li><router-link to="/admin"><i class="fas fa-tachometer-alt"></i><span class="link-text">数据统计</span></router-link></li>
+        <li><router-link to="/user_management"><i class="fas fa-user-tag"></i><span class="link-text">用户管理</span></router-link></li>
+        <li><router-link to="/administrator_update_profile" class="active"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -92,7 +92,7 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 
 const user = ref({})
@@ -104,18 +104,11 @@ const fileInput = ref(null)
 // 跳转
 const go = (path) => router.push(path)
 
-// 修正头像路径
-const fixAvatar = (u) => {
-  if (u.avatar && !u.avatar.startsWith('http')) {
-    u.avatar = 'http://127.0.0.1:8000/' + u.avatar
-  }
-  return u
-}
 
 // 加载数据
 const load = async () => {
   try {
-    const res = await axios.get('/api/get_profile/')
+    const res = await api.get('/api/get_profile/')
     console.log('接口返回:', res)
 
     if (res.data.success) {
@@ -152,7 +145,7 @@ const submit = async () => {
     form.append('avatar', file.value)
   }
 
-  const res = await axios.post(
+  const res = await api.post(
     'http://127.0.0.1:8000/api/administrator_update_profile/',
     form
   )
@@ -175,63 +168,89 @@ onMounted(load)
 </script>
 
 <style>
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:'Segoe UI','Microsoft YaHei',sans-serif
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
-:root{
-  --primary:#1a3a5f;
-  --accent:#3182ce;
-  --light:#f7fafc;
-  --dark:#2d3748;
-  --gray:#a0aec0;
-  --danger:#e53e3e;
+/* ===== 布局 ===== */
+.app {
+  display: flex;
 }
 
-body{
-  background:#edf2f7;
+/* ===== 侧边栏整体 ===== */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+  background: #1a3a5f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
-/* sidebar */
-.sidebar{
-  width:250px;
-  background:var(--primary);
-  color:#fff;
-  position:fixed;
-  height:100%;
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-.logo-container{
-  padding:20px;
-  border-bottom:1px solid rgba(255,255,255,.1);
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
 }
 
-.logo{
-  display:flex;
-  align-items:center;
-  font-weight:700;
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
 }
 
-.logo i{
-  margin-right:10px;
-  color:var(--accent);
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
 }
 
-.nav-links a{
-  display:flex;
-  align-items:center;
-  padding:12px 20px;
-  color:rgba(255,255,255,.8);
-  cursor:pointer;
+/* 每一项 */
+.nav-links li {
+  width: 100%;
 }
 
-.nav-links a:hover,
-.nav-links a.active{
-  background:rgba(255,255,255,.1);
-  border-left:4px solid var(--accent);
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
 }
 
 /* main */

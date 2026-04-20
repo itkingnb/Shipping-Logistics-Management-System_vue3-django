@@ -3,15 +3,20 @@
 
     <!-- ===== 侧边栏 ===== -->
     <div class="sidebar">
-      <div class="logo">航运物流公司管理系统</div>
+      <div class="logo-container">
+        <div class="logo">
+          <i class="fas fa-ship"></i>
+          <span class="logo-text">航运物流公司管理系统</span>
+        </div>
+      </div>
 
-      <ul>
-        <li @click="go('/operator/report')">报表统计</li>
-        <li @click="go('/operator/customer')">客户管理</li>
-        <li @click="go('/operator/port')">港口管理</li>
-        <li @click="go('/operator/cargo')">货物管理</li>
-        <li @click="go('/operator/order')">订单管理</li>
-        <li @click="go('/operator/profile')">系统设置</li>
+      <ul class="nav-links">
+        <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
+        <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
+        <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
+        <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
+        <li><router-link to="/order" class="active"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
+        <li><router-link to="/operator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -249,7 +254,7 @@ onMounted(loadInit)
 import { ref, reactive, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 
 const user = reactive({ name: '', role: '', avatar: '' })
@@ -266,27 +271,21 @@ const form = ref({
   destination_port: ''
 })
 
-/* ===== 头像修复 ===== */
-const fixAvatar = (u) => {
-  if (!u.avatar) return '/avatar.png'
-  if (u.avatar.startsWith('http')) return u.avatar
-  return 'http://127.0.0.1:8000' + u.avatar
-}
 
 /* ===== 用户 ===== */
 const loadUser = async () => {
-  const res = await axios.get("/api/user_info/")
-  const data = res.data
-  data.avatar = fixAvatar(data)
-  Object.assign(user, data)
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
+  Object.assign(user, userRes.data)
+  console.log(user)
 }
 
 /* ===== 初始化 ===== */
 const loadInit = async () => {
   const [c, p, g] = await Promise.all([
-    axios.get('/api/customers/'),
-    axios.get('/api/ports/'),
-    axios.get('/api/cargos/')
+    api.get('/api/customers/'),
+    api.get('/api/ports/'),
+    api.get('/api/cargos/')
   ])
 
   customers.value = c.data.data.customers
@@ -329,7 +328,7 @@ const submit = async (isDraft) => {
       is_draft: isDraft
     }
 
-    const res = await axios.post('/api/create_order/', payload)
+    const res = await api.post('/api/create_order/', payload)
 
     if (res.data.error) {
       alert(res.data.error)
@@ -369,22 +368,89 @@ onMounted(() => {
 
 
 <style scoped>
-.layout {
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== 布局 ===== */
+.app {
   display: flex;
 }
 
-/* sidebar */
+/* ===== 侧边栏整体 ===== */
 .sidebar {
-  width: 220px;
-  background: #1a3a5f;
-  color: white;
-  height: 100vh;
   position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+  background: #1a3a5f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
-.sidebar li {
-  padding: 12px;
-  cursor: pointer;
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
+
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
 }
 
 /* main */

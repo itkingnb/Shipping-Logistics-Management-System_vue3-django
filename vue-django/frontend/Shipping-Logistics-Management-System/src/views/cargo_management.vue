@@ -2,15 +2,20 @@
   <div class="app">
     <!-- sidebar -->
     <div class="sidebar">
-      <div class="logo">航运物流公司管理系统</div>
+      <div class="logo-container">
+        <div class="logo">
+          <i class="fas fa-ship"></i>
+          <span class="logo-text">航运物流公司管理系统</span>
+        </div>
+      </div>
 
       <ul class="nav-links">
-        <li><router-link to="/operator">报表统计</router-link></li>
-        <li><router-link to="/customer">客户管理</router-link></li>
-        <li><router-link to="/port">港口管理</router-link></li>
-        <li><a class="active">货物管理</a></li>
-        <li><router-link to="/order">订单管理</router-link></li>
-        <li><router-link to="/settings">系统设置</router-link></li>
+        <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
+        <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
+        <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
+        <li><router-link to="/cargo" class="active"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
+        <li><router-link to="/order"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
+        <li><router-link to="/operator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -161,10 +166,7 @@ const edit = (id) => {
 const go = (path) => {
   router.push(path)
 }
-const fixAvatar = (u) => { 
-  u.avatar = 'http://127.0.0.1:8000/' + u.avatar
-  return u
-}
+
 onMounted(async () => {
   await loadData(1)
   const res = await api.get("/api/user_info/")
@@ -183,40 +185,81 @@ html, body {
   display: flex;
 }
 
-/* sidebar */
+/* ===== 侧边栏整体 ===== */
 .sidebar {
   position: fixed;
   left: 0;
   top: 0;
-  width: 220px;
+  width: 240px;
   height: 100vh;
-}
-.app { display: flex; }
-
-/* sidebar */
-.sidebar {
-  width: 220px;
   background: #1a3a5f;
-  color: white;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== logo ===== */
+.logo-container {
   padding: 20px;
-  height: 100vh;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-.logo { font-weight: bold; margin-bottom: 20px; }
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
 
-.nav-links { list-style: none; padding: 0; }
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
 
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
 .nav-links a {
-  display: block;
-  color: white;
-  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
   text-decoration: none;
+
+  transition: all 0.2s;
 }
 
-.nav-links a.active,
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
 .nav-links a:hover {
   background: rgba(255,255,255,0.1);
+  color: #fff;
 }
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
+}
+/**/
 
 /* main */
 .main-content {

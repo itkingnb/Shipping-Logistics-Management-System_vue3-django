@@ -3,15 +3,20 @@
 
     <!-- ===== 侧边栏 ===== -->
     <div class="sidebar">
-      <div class="logo">航运物流公司管理系统</div>
+      <div class="logo-container">
+        <div class="logo">
+          <i class="fas fa-ship"></i>
+          <span class="logo-text">航运物流公司管理系统</span>
+        </div>
+      </div>
 
-      <ul>
-        <li @click="go('/operator/report')">报表统计</li>
-        <li @click="go('/operator/customer')">客户管理</li>
-        <li @click="go('/operator/port')">港口管理</li>
-        <li @click="go('/operator/cargo')">货物管理</li>
-        <li class="active">订单管理</li>
-        <li @click="go('/operator/profile')">系统设置</li>
+      <ul class="nav-links">
+        <li><router-link to="/operator"><i class="fas fa-user-tag"></i><span class="link-text">报表统计</span></router-link></li>
+        <li><router-link to="/customer"><i class="fas fa-user-tag"></i><span class="link-text">客户管理</span></router-link></li>
+        <li><router-link to="/port"><i class="fas fa-anchor"></i><span class="link-text">港口管理</span></router-link></li>
+        <li><router-link to="/cargo"><i class="fas fa-box"></i><span class="link-text">货物管理</span></router-link></li>
+        <li><router-link to="/order" class="active"><i class="fas fa-file-invoice"></i><span class="link-text">订单管理</span></router-link></li>
+        <li><router-link to="/operator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
 
@@ -122,10 +127,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue"
+import { ref, reactive, onMounted, nextTick } from "vue"
 import axios from "axios"
 import { useRoute, useRouter } from "vue-router"
-
+import { api,fixAvatar } from "../utils/common.js"
 const route = useRoute()
 const router = useRouter()
 
@@ -146,43 +151,67 @@ const form = ref({
   destination_port: ""
 })
 
-/* ===== 头像处理 ===== */
-const fixAvatar = (u) => {
-  if (!u.avatar) return "/avatar.png"
-  if (!u.avatar.startsWith("http")) {
-    return "http://127.0.0.1:8000" + u.avatar
-  }
-  return u.avatar
-}
+
 
 /* ===== 用户 ===== */
 const loadUser = async () => {
-  const res = await axios.get("/api/user_info/")
-  const data = res.data
-  data.avatar = fixAvatar(data)
-  Object.assign(user, data)
+  const userRes = await api.get('/api/user_info/')
+  user.value = fixAvatar(userRes.data)
+  Object.assign(user, userRes.data)
+  console.log(user)
 }
 
 /* ===== 初始化 ===== */
 const loadInit = async () => {
   const [o, c, p, g] = await Promise.all([
-    axios.get(`/api/order/${orderId}/`),
-    axios.get("/api/customers/"),
-    axios.get("/api/ports/"),
-    axios.get("/api/cargos/")
+    api.get(`/api/order/${orderId}/`),
+    api.get("/api/customers/"),
+    api.get("/api/ports/"),
+    api.get("/api/cargos/")
   ])
 
   const order = o.data
 
+  // ===== 列表 =====
+  customers.value = c.data.data.customers
+  ports.value = p.data.list
+  cargos.value = g.data.list
+
+  // ===== 👇 关键：补“当前值” =====
+
+  // 客户
+  if (order.customer && !customers.value.find(x => x.customer_id === order.customer)) {
+    customers.value.push({
+      customer_id: order.customer,
+      customer_name: order.customer_name || `客户#${order.customer}`
+    })
+  }
+
+  // 出发港口
+  if (order.origin_port && !ports.value.find(x => x.port_id === order.origin_port)) {
+    ports.value.push({
+      port_id: order.origin_port,
+      port_name: order.origin_port_name || `港口#${order.origin_port}`
+    })
+  }
+
+  // 目标港口
+  if (order.destination_port && !ports.value.find(x => x.port_id === order.destination_port)) {
+    ports.value.push({
+      port_id: order.destination_port,
+      port_name: order.destination_port_name || `港口#${order.destination_port}`
+    })
+  }
+
+  // ===== 等DOM更新 =====
+  await nextTick()
+
+  // ===== 回填 =====
   form.value.customer = order.customer
   form.value.origin_port = order.origin_port
   form.value.destination_port = order.destination_port
 
   cargoList.value = order.cargo_list || []
-
-  customers.value = c.data.data.customers
-  ports.value = p.data.list
-  cargos.value = g.data.list
 }
 
 /* ===== 添加货物 ===== */
@@ -212,7 +241,7 @@ const removeCargo = (i) => {
 /* ===== 提交 ===== */
 const submit = async (isDraft) => {
   try {
-    await axios.post(`/api/order/update/${orderId}/`, {
+    await api.post(`/api/order/update/${orderId}/`, {
       ...form.value,
       cargo_list: cargoList.value,
       is_draft: isDraft
@@ -241,17 +270,90 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.layout { display: flex; }
-
-.sidebar {
-  width: 220px;
-  background: #1a3a5f;
-  color: white;
-  height: 100vh;
-  position: fixed;
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
-.sidebar li { padding: 12px; cursor: pointer; }
+/* ===== 布局 ===== */
+.app {
+  display: flex;
+}
+
+/* ===== 侧边栏整体 ===== */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+  background: #1a3a5f;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== logo ===== */
+.logo-container {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+}
+
+.logo i {
+  margin-right: 10px;
+  color: #3182ce;
+}
+
+/* ===== 菜单 ===== */
+.nav-links {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* 每一项 */
+.nav-links li {
+  width: 100%;
+}
+
+/* 链接（重点） */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* ✅ 文字整体居中 */
+
+  width: 100%;
+  height: 48px;
+
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+
+  transition: all 0.2s;
+}
+
+/* 图标 */
+.nav-links i {
+  margin-right: 8px;
+}
+
+/* hover */
+.nav-links a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+/* active（整行高亮） */
+.nav-links a.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-left: 4px solid #3182ce;
+}
 
 .main {
   margin-left: 220px;

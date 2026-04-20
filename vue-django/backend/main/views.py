@@ -1022,14 +1022,22 @@ def create_order_api(request):
     except Exception as e:
         print("❌ 创建订单失败:", e)
         return JsonResponse({"error": str(e)}, status=500)
-    
+def get_port_id(name):
+    """根据港口名获取ID（安全版）"""
+    if not name:
+        return None
+    try:
+        return Port.objects.get(port_name=name).port_id
+    except Port.DoesNotExist:
+        return None
+
 def get_order_detail(request, order_id):
     order = Order.objects.filter(order_id=order_id).first()
     if not order:
         return JsonResponse({"error": "订单不存在"}, status=404)
 
+    # ===== 货物 =====
     cargos = OrderCargo.objects.filter(order=order)
-
     cargo_list = []
     for oc in cargos:
         cargo_list.append({
@@ -1038,11 +1046,22 @@ def get_order_detail(request, order_id):
             "quantity": oc.quantity
         })
 
+    # ===== 返回 =====
     return JsonResponse({
         "order_id": order.order_id,
+
+        # ✅ 客户（关键）
         "customer": order.customer.customer_id if order.customer else None,
-        "origin_port": Port.objects.get(port_name=order.origin_port).port_id if order.origin_port else None,
-        "destination_port": Port.objects.get(port_name=order.destination_port).port_id if order.destination_port else None,
+        "customer_name": order.customer.customer_name if order.customer else None,
+
+        # ✅ 港口（兼容你现在的字符串设计）
+        "origin_port": get_port_id(order.origin_port),
+        "origin_port_name": order.origin_port,
+
+        "destination_port": get_port_id(order.destination_port),
+        "destination_port_name": order.destination_port,
+
+        # ✅ 货物
         "cargo_list": cargo_list
     })
 
