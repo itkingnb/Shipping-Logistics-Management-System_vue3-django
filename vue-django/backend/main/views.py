@@ -1321,3 +1321,748 @@ def operator_update_profile(request):
             "success": False,
             "message": str(e)
         })
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.db.models import Count
+import json
+
+@api_view(['GET'])
+def appointer_dashboard(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return Response({'error': '未登录'}, status=401)
+
+    current_user_id = user_info.get('id')
+
+    pending_orders_count = Order.objects.filter(order_status='待指派').count()
+
+    my_active_tasks_count = Task.objects.filter(
+        assigned_by_id=current_user_id,
+        task_status='运输中'
+    ).count()
+
+    my_pending_faults = FaultReport.objects.filter(
+        task_id__assigned_by_id=current_user_id,
+        status='待处理'
+    ).count()
+
+    my_completed_tasks = Task.objects.filter(
+        assigned_by_id=current_user_id,
+        task_status='已完成'
+    ).count()
+
+    task_status_data = (
+        Task.objects.filter(assigned_by_id=current_user_id)
+        .values('task_status')
+        .annotate(count=Count('task_id'))
+    )
+
+    pie_data = [
+        {'name': item['task_status'], 'value': item['count']}
+        for item in task_status_data
+    ]
+
+    recent_tasks = list(
+        Task.objects.filter(assigned_by_id=current_user_id)
+        .select_related('assigned_to')
+        .order_by('-assigned_time')[:5]
+        .values(
+            'task_id',
+            'origin_port',
+            'destination_port',
+            'task_status',
+            'assigned_time',
+            'assigned_to__username'
+        )
+    )
+
+    return Response({
+        'user_info': user_info,
+        'pending_orders_count': pending_orders_count,
+        'my_active_tasks_count': my_active_tasks_count,
+        'my_pending_faults': my_pending_faults,
+        'my_completed_tasks': my_completed_tasks,
+        'pie_data': pie_data,
+        'recent_tasks': recent_tasks
+    })
+
+from django.http import JsonResponse
+
+def appointer_get_profile(request):
+    user_info = request.session.get('user_info')
+
+    if not user_info:
+        return JsonResponse({
+            "success": False,
+            "message": "未登录"
+        })
+
+    user_id = user_info.get('id')
+
+    if not user_id:
+        return JsonResponse({
+            "success": False,
+            "message": "用户信息异常"
+        })
+
+    try:
+        user = User.objects.select_related('role').get(user_id=user_id)
+
+        return JsonResponse({
+            "success": True,
+            "data": {
+                "id": user.user_id,
+                "username": user.username,
+                "phone": user.phone,
+                "email": user.email,
+                "role": user.role.role_name if user.role else "指派员",
+                "avatar": user.photo or ""
+            }
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "message": "用户不存在"
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
+    
+    import os
+import uuid
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def appointer_update_profile(request):
+    if request.method != "POST":
+        return JsonResponse({
+            "success": False,
+            "message": "非法请求"
+        })
+
+    user_info = request.session.get('user_info')
+
+    if not user_info:
+        return JsonResponse({
+            "success": False,
+            "message": "未登录"
+        })
+
+    user_id = user_info.get('id')
+
+    if not user_id:
+        return JsonResponse({
+            "success": False,
+            "message": "用户信息异常"
+        })
+
+    try:
+        user = User.objects.get(user_id=user_id)
+
+        # ===== 获取数据 =====
+        username = request.POST.get("username", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        email = request.POST.get("email", "").strip()
+        avatar_file = request.FILES.get("avatar")
+
+        # ===== 校验 =====
+        if not username or not phone or not email:
+            return JsonResponse({
+                "success": False,
+                "message": "用户名、电话、邮箱不能为空"
+            })
+
+        # ===== 更新基本信息 =====
+        user.username = username
+        user.phone = phone
+        user.email = email
+
+        # ===== 头像处理（优化版）=====
+        if avatar_file:
+            ext = os.path.splitext(avatar_file.name)[1]
+            filename = f"{uuid.uuid4().hex}{ext}"
+
+            save_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
+            os.makedirs(save_dir, exist_ok=True)
+
+            file_path = os.path.join(save_dir, filename)
+
+            with open(file_path, 'wb+') as f:
+                for chunk in avatar_file.chunks():
+                    f.write(chunk)
+
+            # 删除旧头像（避免垃圾文件）
+            if user.photo:
+                old_path = os.path.join(settings.BASE_DIR, user.photo.lstrip('/'))
+                if os.path.exists(old_path):
+                    try:
+                        os.remove(old_path)
+                    except:
+                        pass
+
+            user.photo = f'/media/avatars/{filename}'
+
+        user.save()
+
+        # ===== 更新 session（关键）=====
+        request.session['user_info'] = {
+            'id': user.user_id,
+            'name': user.username,
+            'role': user.role.role_name if user.role else '指派员',
+            'avatar': user.photo,
+        }
+
+        return JsonResponse({
+            "success": True,
+            "message": "更新成功",
+            "data": {
+                "id": user.user_id,
+                "username": user.username,
+                "phone": user.phone,
+                "email": user.email,
+                "avatar": user.photo,
+                "role": user.role.role_name if user.role else '指派员'
+            }
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "message": "用户不存在"
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
+
+
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+
+def api_assign_orders(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    keyword = request.GET.get('keyword', '').strip()
+    page = int(request.GET.get('page', 1))
+
+    orders = Order.objects.exclude(order_status='草稿')
+
+    if keyword:
+        orders = orders.filter(
+            Q(origin_port__icontains=keyword) |
+            Q(destination_port__icontains=keyword) |
+            Q(customer__customer_name__icontains=keyword) |
+            Q(order_status__icontains=keyword)
+        )
+
+    orders = orders.select_related('customer').order_by('order_id')
+
+    # 状态排序（关键）
+    status_order = {
+        '待指派': 0,
+        '运输中': 1,
+        '已完成': 2,
+    }
+
+    orders = sorted(
+        orders,
+        key=lambda r: status_order.get(r.order_status, 3)
+    )
+
+    paginator = Paginator(orders, 10)
+    page_obj = paginator.get_page(page)
+
+    data = []
+    for o in page_obj:
+        data.append({
+            "order_id": o.order_id,
+            "customer_name": o.customer.customer_name,
+            "origin_port": o.origin_port,
+            "destination_port": o.destination_port,
+            "order_status": o.order_status,
+            "total_amount": float(o.total_amount),
+            "created_at": o.created_at.strftime("%Y-%m-%d %H:%M"),
+            "updated_at": o.updated_at.strftime("%Y-%m-%d %H:%M"),
+        })
+
+    return JsonResponse({
+        "success": True,
+        "data": data,
+        "pagination": {
+            "page": page_obj.number,
+            "total_pages": paginator.num_pages,
+            "has_previous": page_obj.has_previous(),
+            "has_next": page_obj.has_next(),
+        }
+    })
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from .models import Order, OrderCargo
+
+def appointer_get_order_detail(request, order_id):
+    user_info = request.session.get('user_info')
+
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    try:
+        order = get_object_or_404(
+            Order.objects.select_related('customer', 'task'),
+            order_id=order_id
+        )
+
+        cargos = OrderCargo.objects.select_related('cargo').filter(order=order)
+
+        cargo_list = []
+        for c in cargos:
+            cargo_list.append({
+                "cargo_name": c.cargo.cargo_name,
+                "cargo_type": c.cargo.cargo_type,
+                "cargo_weight": c.cargo.cargo_weight,
+                "cargo_volume": c.cargo.cargo_volume,
+                "quantity": c.quantity
+            })
+
+        return JsonResponse({
+            "success": True,
+            "data": {
+                "order_id": order.order_id,
+                "customer_name": order.customer.customer_name,
+                "origin_port": order.origin_port,
+                "destination_port": order.destination_port,
+                "created_at": order.created_at.strftime("%Y-%m-%d %H:%M"),
+                "task": {
+                    "task_id": order.task.task_id,
+                    "task_status": order.task.task_status
+                } if order.task else None,
+                "cargos": cargo_list
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)})
+    
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+def api_assign_order_detail(request, order_id):
+    order = get_object_or_404(
+        Order.objects.select_related('customer'),
+        order_id=order_id
+    )
+
+    tasks = Task.objects.select_related('assigned_to').filter(task_status='草稿')
+
+    task_list = []
+    for t in tasks:
+        task_list.append({
+            "task_id": t.task_id,
+            "assigned_to": t.assigned_to.username if t.assigned_to else "未指派",
+            "origin_port": t.origin_port,
+            "destination_port": t.destination_port,
+        })
+
+    return JsonResponse({
+        "success": True,
+        "data": {
+            "order": {
+                "order_id": order.order_id,
+                "customer_name": order.customer.customer_name if order.customer else "",
+                "origin_port": order.origin_port,
+                "destination_port": order.destination_port,
+                "order_status": order.order_status,
+            },
+            "tasks": task_list
+        }
+    })
+    
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def api_assign_order_submit(request, order_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "非法请求"})
+
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    try:
+        order = get_object_or_404(Order, order_id=order_id)
+
+        if order.order_status != '待指派':
+            return JsonResponse({
+                "success": False,
+                "message": "该订单不可被指派"
+            })
+
+        task_id = request.POST.get('task_id')
+        if not task_id:
+            return JsonResponse({
+                "success": False,
+                "message": "请选择任务"
+            })
+
+        try:
+            task = Task.objects.get(task_id=task_id)
+        except Task.DoesNotExist:
+            return JsonResponse({
+                "success": False,
+                "message": "任务不存在"
+            })
+
+        # ===== 核心逻辑 =====
+        order.task = task
+        order.order_status = '已指派'
+        order.save()
+
+        return JsonResponse({
+            "success": True,
+            "message": f"订单 {order_id} 已成功指派到任务 {task_id}"
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
+
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+
+from django.db.models import Case, When, Value, IntegerField
+
+def api_tasks(request):
+    keyword = request.GET.get('keyword', '')
+    page = int(request.GET.get('page', 1))
+
+    qs = Task.objects.select_related('assigned_by','assigned_to')
+
+    if keyword:
+        qs = qs.filter(task_id__icontains=keyword)
+
+    # ✅ 自定义排序
+    qs = qs.order_by(
+        Case(
+            When(task_status='草稿', then=Value(1)),
+            When(task_status='待处理', then=Value(2)),
+            When(task_status='运输中', then=Value(3)),
+            When(task_status='已完成', then=Value(4)),
+            default=Value(5),
+            output_field=IntegerField()
+        )
+    )
+
+    paginator = Paginator(qs, 10)
+    page_obj = paginator.get_page(page)
+
+    data = []
+    for t in page_obj:
+        data.append({
+            "task_id": t.task_id,
+            "assigned_by": t.assigned_by.username if t.assigned_by else '',
+            "assigned_to": t.assigned_to.username if t.assigned_to else '',
+            "assigned_time": t.assigned_time.strftime('%Y-%m-%d %H:%M'),
+            "task_status": t.task_status
+        })
+
+    return JsonResponse({
+        "success": True,
+        "data": {
+            "list": data,
+            "total_pages": paginator.num_pages
+        }
+    })
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+
+def api_track(request, task_id):
+    task = get_object_or_404(Task, task_id=task_id)
+
+    tracks = Track.objects.filter(task=task).order_by('recorded_at')
+
+    data = []
+    for i, t in enumerate(tracks, start=1):
+        data.append({
+            "index": i,
+            "latitude": t.latitude,
+            "longitude": t.longitude,
+            "recorded_at": t.recorded_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+
+    return JsonResponse({
+        "success": True,
+        "task_id": task.task_id,
+        "tracks": data
+    })
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+
+def api_task_detail(request, task_id):
+    task = get_object_or_404(Task, task_id=task_id)
+
+    orders = task.orders.all().select_related('customer')
+
+    order_list = []
+    for o in orders:
+        order_list.append({
+            "order_id": o.order_id,
+            "customer": o.customer.customer_name if o.customer else '',
+            "origin_port": o.origin_port,
+            "destination_port": o.destination_port,
+            "order_status": o.order_status,
+            "total_amount": o.total_amount,
+            "created_at": o.created_at.strftime('%Y-%m-%d %H:%M')
+        })
+
+    data = {
+        "task": {
+            "task_id": task.task_id,
+            "assigned_by": task.assigned_by.username if task.assigned_by else '',
+            "assigned_to": task.assigned_to.username if task.assigned_to else '',
+            "task_status": task.task_status,
+            "origin_port": task.origin_port,
+            "destination_port": task.destination_port,
+            "assigned_time": task.assigned_time.strftime('%Y-%m-%d %H:%M') if task.assigned_time else '',
+            "start_time": task.start_time.strftime('%Y-%m-%d %H:%M') if task.start_time else ''
+        },
+        "orders": order_list
+    }
+
+    return JsonResponse({
+        "success": True,
+        "data": data
+    })
+
+def get_task_detail(request, task_id):
+    task = Task.objects.filter(pk=task_id).first()
+    if not task:
+        return JsonResponse({"error": "任务不存在"}, status=404)
+
+    return JsonResponse({
+        "task_id": task.task_id,
+        "assigned_to": task.assigned_to.user_id if task.assigned_to else None,
+        "origin_port": task.origin_port,
+        "destination_port": task.destination_port,
+        "start_time": task.start_time.strftime('%Y-%m-%dT%H:%M') if task.start_time else "",
+        "task_status": task.task_status
+    })
+
+
+
+def get_task_meta(request):
+    users = User.objects.filter(role_id=4)  # ✅ 只要运输员
+    ports = Port.objects.all()
+
+    return JsonResponse({
+        "users": [
+            {"id": u.user_id, "name": u.username}
+            for u in users
+        ],
+        "ports": [
+            {"name": p.port_name}
+            for p in ports
+        ]
+    })
+import json
+
+@csrf_exempt
+def update_task(request, task_id):
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    task = Task.objects.filter(pk=task_id).first()
+    if not task:
+        return JsonResponse({"error": "任务不存在"}, status=404)
+
+    data = json.loads(request.body)
+
+    task.assigned_to_id = data.get('assigned_to') or None
+    task.origin_port = data.get('origin_port')
+    task.destination_port = data.get('destination_port')
+    task.start_time = data.get('start_time')
+    task.task_status = data.get('task_status')
+
+    task.save()
+
+    return JsonResponse({"success": True})
+
+def get_task_create_meta(request):
+    # 只返回“运输员”
+    users = User.objects.filter(role__role_name="运输员")
+
+    ports = Port.objects.all()
+    orders = Order.objects.filter(order_status='待指派')
+
+    return JsonResponse({
+        "users": [
+            {"id": u.user_id, "name": u.username}
+            for u in users
+        ],
+        "ports": [
+            {
+                "name": p.port_name,
+                "code": p.port_code,
+                "city": p.city,
+                "country": p.country
+            }
+            for p in ports
+        ],
+        "orders": [
+            {
+                "id": o.order_id,
+                "label": f"{o.order_id} - {o.customer.customer_name}"
+            }
+            for o in orders
+        ]
+    })
+
+@csrf_exempt
+def create_task_api(request):
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"error": "未登录"}, status=403)
+
+    data = json.loads(request.body)
+
+    try:
+        with transaction.atomic():
+            task = Task.objects.create(
+                assigned_by_id=user_info['id'],
+                assigned_to_id=data.get('assigned_to'),
+                assigned_time=timezone.now(),
+                task_status=data.get('task_status', '待处理'),
+                origin_port=data.get('origin_port'),
+                destination_port=data.get('destination_port'),
+                start_time=data.get('start_time')
+            )
+
+            # 关联订单
+            if data.get('order_id'):
+                order = Order.objects.get(order_id=data.get('order_id'))
+                order.task = task
+                order.order_status = '已指派'
+                order.save()
+
+        return JsonResponse({"success": True})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    
+# views.py
+from django.http import JsonResponse
+from django.db.models import Case, When, Value, IntegerField
+
+def api_fault_list(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"error": "未登录"}, status=401)
+
+    user_id = user_info.get('id')
+
+    fault_reports = (
+        FaultReport.objects
+        .filter(task_id__assigned_by_id=user_id)
+        .select_related('reported_by', 'task_id')
+        .annotate(
+            status_order=Case(
+                When(status='未处理', then=Value(0)),
+                When(status='处理中', then=Value(1)),
+                When(status='已处理', then=Value(2)),
+                default=Value(3),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by('status_order')
+    )
+
+    data = [{
+        "id": f.report_id,
+        "task_id": f.task_id.task_id if f.task_id else None,
+        "reported_by": f.reported_by.username,
+        "reported_at": f.reported_at.strftime('%Y-%m-%d %H:%M'),
+        "status": f.status,
+        "description": f.description
+    } for f in fault_reports]
+
+    return JsonResponse({"faults": data})
+
+
+
+@csrf_exempt
+def api_fault_detail(request, report_id):
+    f = FaultReport.objects.select_related('reported_by', 'task_id').filter(report_id=report_id).first()
+    if not f:
+        return JsonResponse({"error": "不存在"}, status=404)
+
+    return JsonResponse({
+        "id": f.report_id,
+        "task_id": f.task_id.task_id if f.task_id else None,
+        "reported_by": f.reported_by.username,
+        "reported_at": f.reported_at.strftime('%Y-%m-%d %H:%M'),
+        "status": f.status,
+        "description": f.description
+    })
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import connection, transaction
+
+@csrf_exempt
+@transaction.atomic
+def api_fault_process(request, report_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': '只允许 POST'}, status=405)
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('handle_fault_report', [report_id])
+
+        return JsonResponse({
+            'message': '处理成功',
+            'id': report_id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)
+    
+
+@csrf_exempt
+@transaction.atomic
+def api_fault_finish(request, report_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': '只允许 POST'}, status=405)
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.callproc('handle_fault_report', [report_id])
+            # ⚠️ 如果你没有这个存储过程，可以先继续用 handle_fault_report
+
+        return JsonResponse({
+            'message': '已完成',
+            'id': report_id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)

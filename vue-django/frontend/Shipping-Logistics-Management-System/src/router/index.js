@@ -19,6 +19,19 @@ import Operator_update_profile from '../views/operator_update_profile.vue'
 import Order_management from '../views/order_management.vue'
 import Create_order from '../views/create_order.vue'
 import Edit_order from '../views/edit_order.vue'
+import Appointer from '../views/appointer.vue'
+import Appointer_update_profile from '../views/appointer_update_profile.vue'
+import Assign_orders from '../views/assign_orders.vue'
+import Appointer_order from '../views/appointer_order.vue'
+import Assign_order from '../views/assign_order.vue'
+import Task_management from '../views/task_management.vue'
+import Show_track from '../views/show_track.vue'
+import Show_task from '../views/show_task.vue'
+import Show_order from '../views/show_order.vue'
+import Edit_task from '../views/edit_task.vue'
+import Create_task from '../views/create_task.vue'
+import Fault from '../views/fault.vue'
+import Show_fault from '../views/show_fault.vue'
 
 
 const routes = [
@@ -41,7 +54,19 @@ const routes = [
   { path: '/create-order', component: Create_order },
   {path: '/operator_update_profile',component:Operator_update_profile},
   {path: '/order/edit/:id',component: Edit_order },
-  
+  {path: '/appointer',component:Appointer},
+  {path: '/appointer_update_profile',component:Appointer_update_profile},
+  {path: '/assign_orders',component:Assign_orders},
+  {path: '/appointer_order/:id',component:Appointer_order},
+  {path: '/assign_order/:id',component:Assign_order},
+  {path: '/task_management',component:Task_management},
+  {path: '/show_track/:id',component:Show_track},
+  {path: '/show_task/:id',component:Show_task},
+  {path: '/show_order/:id',component:Show_order},
+  {path: '/edit_task/:id',component:Edit_task},
+  {path: '/create_task',component:Create_task},
+  {path: '/fault',component:Fault},
+  {path: '/fault/:id',component:Show_fault},
   // {path: '/appointer',component: () => import('../views/appointer.vue')},
   // {path: '/transporter',component: () => import('../views/transporter.vue')},
 ]
