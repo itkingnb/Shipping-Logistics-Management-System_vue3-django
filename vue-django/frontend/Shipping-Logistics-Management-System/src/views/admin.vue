@@ -1,6 +1,7 @@
 <template>
   <div class="app">
-    <!-- 侧边栏 -->
+
+    <!-- ===== 侧边栏（完全不动） ===== -->
     <div class="sidebar">
       <div class="logo-container">
         <div class="logo">
@@ -15,69 +16,57 @@
         <li><router-link to="/administrator_update_profile"><i class="fas fa-cog"></i><span class="link-text">系统设置</span></router-link></li>
       </ul>
     </div>
-    
 
-    <!-- 主内容 -->
+    <!-- ===== 主体（美化重点） ===== -->
     <div class="main-content">
-      <div class="header">
-        <h1>系统管理控制台</h1>
+
+      <!-- Header -->
+      <div class="header card">
+        <h1>📊 系统管理控制台</h1>
+
         <div class="user-info">
           <img :src="user.avatar || '/avatar.png'" />
           <div>
-            <div>{{ user.name }}</div>
+            <div class="name">{{ user.name }}</div>
             <div class="role-text">{{ user.role }}</div>
           </div>
         </div>
       </div>
 
       <!-- KPI -->
-      <div class="card">
-        <div class="card-header">
-          <h2><i class="fas fa-chart-line"></i> 数据统计</h2>
+      <div class="kpi-container">
+        <div class="kpi-card blue">
+          <div>历史订单</div>
+          <h2>{{ kpi.total_orders }}</h2>
         </div>
 
-        <div class="card-body">
-          <div class="kpi-container">
-            <div class="kpi-card">
-              <div class="kpi-title">历史订单总数</div>
-              <div class="kpi-value">{{ kpi.total_orders }}</div>
-            </div>
+        <div class="kpi-card green">
+          <div>货物总价值</div>
+          <h2>¥{{ kpi.total_value }}</h2>
+        </div>
 
-            <div class="kpi-card">
-              <div class="kpi-title">货物总价值</div>
-              <div class="kpi-value">¥{{ kpi.total_value }}</div>
-            </div>
+        <div class="kpi-card orange">
+          <div>在途任务</div>
+          <h2>{{ kpi.in_transit }}</h2>
+        </div>
 
-            <div class="kpi-card">
-              <div class="kpi-title">在途任务</div>
-              <div class="kpi-value warn">{{ kpi.in_transit }}</div>
-            </div>
-
-            <div class="kpi-card">
-              <div class="kpi-title">完成率</div>
-              <div class="kpi-value">{{ kpi.rate }}%</div>
-            </div>
-          </div>
+        <div class="kpi-card purple">
+          <div>完成率</div>
+          <h2>{{ kpi.rate }}%</h2>
         </div>
       </div>
 
       <!-- 图表 -->
-      <div class="card" style="margin-top:20px;">
-        <div class="card-header">
-          <h2><i class="fas fa-chart-area"></i> 数据分析</h2>
-        </div>
+      <div class="card chart-card">
+        <div class="chart-row">
+          <div>
+            <h3>📈 订单趋势</h3>
+            <div ref="trendRef" class="chart"></div>
+          </div>
 
-        <div class="card-body">
-          <div class="chart-row">
-            <div>
-              <h3>订单趋势</h3>
-              <div ref="trendRef" class="chart"></div>
-            </div>
-
-            <div>
-              <h3>订单状态</h3>
-              <div ref="pieRef" class="chart"></div>
-            </div>
+          <div>
+            <h3>📊 状态分布</h3>
+            <div ref="pieRef" class="chart"></div>
           </div>
         </div>
       </div>
@@ -89,34 +78,9 @@
 <script setup>
 import * as echarts from 'echarts'
 import { ref, onMounted, nextTick } from 'vue'
-import axios from 'axios'
-import { useRouter } from 'vue-router'
-import { api,fixAvatar } from "../utils/common.js"
-const router = useRouter()
+import { api, fixAvatar } from "../utils/common.js"
 
-// ===== 用户 =====
-const user = ref({
-  name: '',
-  role: '',
-  avatar: ''
-})
-
-// 页面加载时读取
-const loadUser = async () => {
-  const userRes = await api.get('/api/user_info/')
-  user.value = fixAvatar(userRes.data)
-  Object.assign(user, userRes.data)
-  console.log(user)
-}
-
-// 本地默认头像（避免外链报错）
-// const defaultAvatar = '/logo.png'
-onMounted(() => {
-  loadUser()
-  loadData()
-})
-
-// ===== KPI =====
+const user = ref({})
 const kpi = ref({
   total_orders: 0,
   total_value: 0,
@@ -124,199 +88,168 @@ const kpi = ref({
   rate: 0
 })
 
-// ===== 图表 DOM =====
 const trendRef = ref(null)
 const pieRef = ref(null)
 
-// ===== 跳转 =====
-const go = (path) => {
-  router.push(path)
+/* ===== 用户 ===== */
+const loadUser = async () => {
+  const res = await api.get('/api/user_info/')
+  Object.assign(user.value, fixAvatar(res.data))
 }
 
-// ===== 初始化图表 =====
+/* ===== 图表美化 ===== */
 const initCharts = (data) => {
-  if (!data) return
 
-  // ===== 折线图（订单趋势）=====
-  if (trendRef.value && data.monthly_orders) {
-    const months = data.monthly_orders.map(i => i.month)
-    const orders = data.monthly_orders.map(i => i.count)
+  // 折线图（高级版）
+  const trendChart = echarts.init(trendRef.value)
+  trendChart.setOption({
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.monthly_orders.map(i => i.month),
+      axisLine: { lineStyle: { color: '#ccc' } }
+    },
+    yAxis: { type: 'value' },
+    series: [{
+      data: data.monthly_orders.map(i => i.count),
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 8,
+      lineStyle: { width: 3 },
+      areaStyle: {
+        opacity: 0.2
+      }
+    }]
+  })
 
-    const trendChart = echarts.init(trendRef.value)
-    trendChart.setOption({
-      tooltip: {},
-      xAxis: { type: 'category', data: months },
-      yAxis: { type: 'value' },
-      series: [{
-        data: orders,
-        type: 'line',
-        smooth: true,
-        areaStyle: {}
-      }]
-    })
-  }
-
-  // ===== 饼图（订单状态）=====
-  if (pieRef.value && data.order_status_count) {
-    const status = data.order_status_count.map(i => ({
-      name: i.order_status,
-      value: i.count
-    }))
-
-    const pieChart = echarts.init(pieRef.value)
-    pieChart.setOption({
-      tooltip: {},
-      series: [{
-        type: 'pie',
-        radius: ['40%', '70%'],
-        data: status
-      }]
-    })
-  }
+  // 饼图（环形 + 动效）
+  const pieChart = echarts.init(pieRef.value)
+  pieChart.setOption({
+    tooltip: { trigger: 'item' },
+    legend: { bottom: 0 },
+    series: [{
+      type: 'pie',
+      radius: ['50%', '75%'],
+      itemStyle: {
+        borderRadius: 8,
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      label: { show: true, formatter: '{b}: {d}%' },
+      data: data.order_status_count.map(i => ({
+        name: i.order_status,
+        value: i.count
+      }))
+    }]
+  })
 }
 
-// ===== 获取数据 =====
+/* ===== 数据 ===== */
 const loadData = async () => {
-  try {
-    const res = await api.get('http://127.0.0.1:8000/api/dashboard/')
+  const res = await api.get('/api/dashboard/')
+  const d = res.data.data
 
-    if (res.data.success) {
-      const data = res.data.data
+  kpi.value.total_orders = d.total_orders
+  kpi.value.total_value = d.cargo_total_amount
 
-      // ===== KPI 映射 =====
-      kpi.value.total_orders = data.total_orders
-      kpi.value.total_value = data.cargo_total_amount
+  const done = d.order_status_count.find(i => i.order_status === '已完成')
+  const total = d.total_orders || 1
+  kpi.value.rate = done ? Math.round(done.count / total * 100) : 0
 
-      const transit = data.order_status_count.find(i => i.order_status === '运输中')
-      kpi.value.in_transit = transit ? transit.count : 0
+  const transit = d.order_status_count.find(i => i.order_status === '运输中')
+  kpi.value.in_transit = transit ? transit.count : 0
 
-      const total = data.total_orders || 1
-      const done = data.order_status_count.find(i => i.order_status === '已完成')
-      kpi.value.rate = done ? Math.round((done.count / total) * 100) : 0
-
-      // ===== 图表 =====
-      await nextTick()
-      initCharts(data)
-    }
-
-  } catch (e) {
-    console.error('接口错误', e)
-  }
+  await nextTick()
+  initCharts(d)
 }
 
 onMounted(() => {
+  loadUser()
   loadData()
 })
 </script>
 
-<style>
-html, body {
-  margin: 0;
-  padding: 0;
+<style scoped>
+/* ===== 主体背景 ===== */
+.main-content {
+  margin-left: 250px;
+  padding: 25px;
+  background: #f4f7fb;
 }
 
-/* ===== 布局 ===== */
-.app {
+/* ===== Header 卡片 ===== */
+.header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding: 15px 20px;
 }
 
-/* ===== 侧边栏整体 ===== */
-.sidebar {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 240px;
-  height: 100vh;
-  background: #1a3a5f;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ===== logo ===== */
-.logo-container {
-  padding: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.logo {
+/* 用户 */
+.user-info {
   display: flex;
   align-items: center;
-  font-weight: bold;
 }
-
-.logo i {
+.user-info img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
   margin-right: 10px;
-  color: #3182ce;
+}
+.name { font-weight: 600 }
+.role-text { font-size: 12px; color: #888 }
+
+/* ===== KPI ===== */
+.kpi-container {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
-/* ===== 菜单 ===== */
-.nav-links {
-  list-style: none;
-  padding: 10px 0;
-  margin: 0;
+.kpi-card {
+  padding: 20px;
+  border-radius: 14px;
+  color: white;
+  transition: all 0.25s;
 }
 
-/* 每一项 */
-.nav-links li {
-  width: 100%;
+.kpi-card h2 {
+  margin-top: 10px;
+  font-size: 26px;
 }
 
-/* 链接（重点） */
-.nav-links a {
-  display: flex;
-  align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
-
-  width: 100%;
-  height: 48px;
-
-  color: rgba(255,255,255,0.8);
-  text-decoration: none;
-
-  transition: all 0.2s;
+.kpi-card:hover {
+  transform: translateY(-5px);
 }
 
-/* 图标 */
-.nav-links i {
-  margin-right: 8px;
+/* 渐变色 */
+.blue { background: linear-gradient(135deg,#3b82f6,#1e40af) }
+.green { background: linear-gradient(135deg,#10b981,#047857) }
+.orange { background: linear-gradient(135deg,#f59e0b,#b45309) }
+.purple { background: linear-gradient(135deg,#8b5cf6,#5b21b6) }
+
+/* ===== 卡片 ===== */
+.card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.05);
 }
 
-/* hover */
-.nav-links a:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+/* ===== 图表 ===== */
+.chart-card {
+  padding: 20px;
 }
 
-/* active（整行高亮） */
-.nav-links a.active {
-  background: rgba(255,255,255,0.15);
-  color: #fff;
-  border-left: 4px solid #3182ce;
+.chart-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
 }
 
-.main-content{margin-left:250px;padding:20px}
-
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid #ddd;padding-bottom:10px}
-.header h1{color:var(--primary)}
-
-.user-info{display:flex;align-items:center}
-.user-info img{width:40px;height:40px;border-radius:50%;margin-right:10px;border:2px solid var(--accent)}
-.role-text{font-size:12px;color:var(--gray)}
-
-.card{background:#fff;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,.05)}
-.card-header{padding:15px;border-bottom:1px solid #eee}
-.card-header h2{color:var(--primary)}
-.card-body{padding:15px}
-
-/* KPI */
-.kpi-container{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
-.kpi-card{background:var(--light);padding:15px;border-radius:8px;text-align:center}
-.kpi-title{color:var(--gray);font-size:14px}
-.kpi-value{font-size:22px;font-weight:bold;color:var(--dark)}
-.warn{color:orange}
-
-/* 图表 */
-.chart-row{display:grid;grid-template-columns:2fr 1fr;gap:20px}
-.chart{height:300px}
+.chart {
+  height: 320px;
+}
 </style>

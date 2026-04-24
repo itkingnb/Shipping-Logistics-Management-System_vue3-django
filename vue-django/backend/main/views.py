@@ -2007,7 +2007,7 @@ def api_fault_list(request):
 
 
 @csrf_exempt
-def api_fault_detail(request, report_id):
+def api_fault(request, report_id):
     f = FaultReport.objects.select_related('reported_by', 'task_id').filter(report_id=report_id).first()
     if not f:
         return JsonResponse({"error": "不存在"}, status=404)
@@ -2066,3 +2066,620 @@ def api_fault_finish(request, report_id):
         return JsonResponse({
             'error': str(e)
         }, status=500)
+    
+@require_GET
+def transporter_api(request):
+    user_info = request.session.get('user_info')
+
+    if not user_info:
+        return JsonResponse({'error': '未登录'}, status=401)
+
+    user_id = user_info.get('id')
+
+    total_count = Task.objects.filter(assigned_to_id=user_id).count()
+    completed_count = Task.objects.filter(
+        assigned_to_id=user_id,
+        task_status='已完成'
+    ).count()
+
+    transit_count = Task.objects.filter(
+        assigned_to_id=user_id,
+        task_status='运输中'
+    ).count()
+
+    fault_count = FaultReport.objects.filter(
+        reported_by_id=user_id
+    ).count()
+
+    completion_rate = 0
+    if total_count > 0:
+        completion_rate = round((completed_count / total_count) * 100, 1)
+
+    tasks = Task.objects.filter(
+        assigned_to_id=user_id,
+        task_status='运输中'
+    ).select_related('assigned_by').order_by('-assigned_time')
+
+    task_list = []
+    for t in tasks:
+        task_list.append({
+            'task_id': t.task_id,
+            'origin_port': t.origin_port,
+            'destination_port': t.destination_port,
+            'assigned_by': t.assigned_by.username if t.assigned_by else '未知',
+            'assigned_time': t.assigned_time.strftime('%m-%d %H:%M')
+        })
+
+    return JsonResponse({
+        'user_info': user_info,
+        'total_count': total_count,
+        'completed_count': completed_count,
+        'transit_count': transit_count,
+        'fault_count': fault_count,
+        'completion_rate': completion_rate,
+        'tasks': task_list
+    })
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import os, uuid
+from django.conf import settings
+
+@csrf_exempt
+def transporter_update_profile(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "非法请求"})
+
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    try:
+        user_id = user_info.get('id')
+        user = User.objects.get(user_id=user_id)
+
+        # ===== 基本信息 =====
+        user.username = request.POST.get("username")
+        user.phone = request.POST.get("phone")
+        user.email = request.POST.get("email")
+
+        # ===== 头像处理 =====
+        avatar_file = request.FILES.get("avatar")
+        if avatar_file:
+            ext = os.path.splitext(avatar_file.name)[1]
+            filename = f"{uuid.uuid4().hex}{ext}"
+
+            save_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
+            os.makedirs(save_dir, exist_ok=True)
+
+            file_path = os.path.join(save_dir, filename)
+
+            with open(file_path, 'wb+') as f:
+                for chunk in avatar_file.chunks():
+                    f.write(chunk)
+
+            user.photo = f'/media/avatars/{filename}'
+
+        user.save()
+
+        # ===== 更新 session =====
+        request.session['user_info'] = {
+            'id': user.user_id,
+            'name': user.username,
+            'role': user.role.role_name if user.role else '运输员',
+            'avatar': user.photo,
+        }
+
+        return JsonResponse({
+            "success": True,
+            "message": "更新成功",
+            "data": {
+                "username": user.username,
+                "phone": user.phone,
+                "email": user.email,
+                "avatar": user.photo
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)})
+    
+from django.http import JsonResponse
+
+
+@csrf_exempt
+def transporter_get_profile(request):
+    user_info = request.session.get('user_info')
+
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    try:
+        user = User.objects.get(user_id=user_info.get('id'))
+    except User.DoesNotExist:
+        return JsonResponse({"success": False, "message": "用户不存在"})
+
+    return JsonResponse({
+        "success": True,
+        "data": {
+            "id": user.user_id,
+            "username": user.username,
+            "phone": user.phone,
+            "email": user.email,
+            "role": user.role.role_name if user.role else '运输员',
+            "avatar": user.photo
+        }
+    })
+
+
+from django.http import JsonResponse
+from django.db.models import Case, When, Value, IntegerField
+
+def task_center_api(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    user_id = user_info.get('id')
+
+    status_order = Case(
+        When(task_status='待处理', then=Value(1)),
+        When(task_status='运输中', then=Value(2)),
+        When(task_status='已完成', then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField()
+    )
+
+    tasks = Task.objects.filter(
+        assigned_to_id=user_id
+    ).exclude(
+        task_status='草稿'
+    ).select_related('assigned_by').order_by(status_order, '-assigned_time')
+
+    data = []
+    for t in tasks:
+        data.append({
+            "task_id": t.task_id,
+            "origin_port": t.origin_port,
+            "destination_port": t.destination_port,
+            "status": t.task_status,
+            "assigned_time": t.assigned_time.strftime("%Y-%m-%d %H:%M"),
+            "assigned_by": t.assigned_by.username if t.assigned_by else "未知"
+        })
+    # print(data)
+    return JsonResponse({
+        "success": True,
+        "data": data
+    })
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from .models import Task, Track
+
+def transporter_show_task_api(request, task_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    task = get_object_or_404(Task, pk=task_id)
+
+    # ✅ 任务基本信息
+    task_data = {
+        "task_id": task.task_id,
+        "status": task.task_status,
+        "origin_port": task.origin_port,
+        "destination_port": task.destination_port,
+        "assigned_time": task.assigned_time.strftime("%Y-%m-%d %H:%M") if task.assigned_time else None,
+        "start_time": task.start_time.strftime("%Y-%m-%d %H:%M") if task.start_time else None,
+        "assigned_by": task.assigned_by.username if task.assigned_by else "未知",
+        "assigned_to": task.assigned_to.username if task.assigned_to else "未指派",
+    }
+
+    # ✅ 订单
+    orders_qs = task.orders.select_related('customer').all()
+    orders_data = []
+    for o in orders_qs:
+        orders_data.append({
+            "order_id": o.order_id,
+            "customer": o.customer.customer_name if o.customer else "未知",
+            "origin_port": o.origin_port,
+            "destination_port": o.destination_port,
+            "status": o.order_status,
+            "total_amount": float(o.total_amount) if o.total_amount else 0,
+            "created_at": o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else None,
+        })
+
+    # ✅ 轨迹
+    tracks_qs = Track.objects.filter(task=task).order_by('-recorded_at')
+    tracks_data = []
+    for t in tracks_qs:
+        tracks_data.append({
+            "track_id": t.track_id,
+            "latitude": t.latitude,
+            "longitude": t.longitude,
+            "recorded_at": t.recorded_at.strftime("%Y-%m-%d %H:%M:%S"),
+        })
+
+    return JsonResponse({
+        "success": True,
+        "task": task_data,
+        "orders": orders_data,
+        "tracks": tracks_data,
+    })
+
+def transporter_show_order_api(request, order_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    order = get_object_or_404(
+        Order.objects.select_related('customer', 'task'),
+        pk=order_id
+    )
+
+    # ===== 订单 =====
+    order_data = {
+        "order_id": order.order_id,
+        "customer": order.customer.customer_name if order.customer else "未知",
+        "origin_port": order.origin_port,
+        "destination_port": order.destination_port,
+        "created_at": order.created_at.strftime("%Y-%m-%d %H:%M"),
+        "task_id": order.task.task_id if order.task else None,
+        "task_status": order.task.task_status if order.task else None,
+    }
+
+    # ===== 货物 =====
+    cargos_qs = OrderCargo.objects.select_related('cargo').filter(order=order)
+
+    cargos_data = []
+    for c in cargos_qs:
+        cargos_data.append({
+            "name": c.cargo.cargo_name,
+            "type": c.cargo.cargo_type,
+            "weight": c.cargo.cargo_weight,
+            "volume": c.cargo.cargo_volume,
+            "quantity": c.quantity
+        })
+
+    return JsonResponse({
+        "success": True,
+        "order": order_data,
+        "cargos": cargos_data
+    })
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
+from .models import Task
+
+@require_POST
+@csrf_exempt
+def accept_task_api(request, task_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    user_id = user_info.get('id')
+
+    task = get_object_or_404(Task, task_id=task_id, assigned_to_id=user_id)
+
+    # ✅ 只有待处理才能接
+    if task.task_status != '待处理':
+        return JsonResponse({
+            "success": False,
+            "message": "任务状态不允许接受"
+        })
+
+    task.task_status = '运输中'
+    task.save()
+
+    return JsonResponse({
+        "success": True,
+        "message": f"任务 {task.task_id} 已接受",
+        "status": task.task_status
+    })
+
+@require_POST
+@csrf_exempt
+def confirm_delivery_api(request, task_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    task = get_object_or_404(Task, task_id=task_id)
+
+    if task.task_status != '运输中':
+        return JsonResponse({
+            "success": False,
+            "message": "当前状态无法确认送达"
+        })
+
+    task.task_status = '已完成'
+    task.save()
+
+    return JsonResponse({
+        "success": True,
+        "message": f"任务 {task.task_id} 已完成",
+        "status": task.task_status
+    })
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
+from .models import Track
+
+@require_POST
+@csrf_exempt
+def delete_track_api(request, track_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    track = get_object_or_404(Track, track_id=track_id)
+
+    # （可选）安全校验：只能删除自己的任务轨迹
+    if track.task.assigned_to_id != user_info.get('id'):
+        return JsonResponse({
+            "success": False,
+            "message": "无权限删除该轨迹"
+        })
+
+    task_id = track.task.task_id
+
+    track.delete()
+
+    return JsonResponse({
+        "success": True,
+        "message": "轨迹已删除",
+        "task_id": task_id
+    })
+
+# views.py
+from django.http import JsonResponse
+from .models import Task
+
+def running_tasks_api(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    user_id = user_info.get('id')
+
+    tasks = Task.objects.filter(
+        assigned_to_id=user_id,
+        task_status='运输中'
+    )
+
+    data = []
+    for t in tasks:
+        data.append({
+            "task_id": t.task_id,
+            "origin_port": t.origin_port,
+            "destination_port": t.destination_port,
+        })
+
+    return JsonResponse({
+        "success": True,
+        "tasks": data
+    })
+
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
+from .models import Task, Track
+
+@require_POST
+@csrf_exempt
+def report_location_api(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    task_id = request.POST.get('task_id')
+    latitude = request.POST.get('latitude')
+    longitude = request.POST.get('longitude')
+
+    if not (task_id and latitude and longitude):
+        return JsonResponse({
+            "success": False,
+            "message": "请填写完整"
+        })
+
+    task = get_object_or_404(Task, task_id=task_id)
+
+    Track.objects.create(
+        task=task,
+        latitude=latitude,
+        longitude=longitude,
+        recorded_at=timezone.now()
+    )
+
+    return JsonResponse({
+        "success": True,
+        "message": "上报成功"
+    })
+
+# views.py
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from .models import FaultReport
+
+@require_GET
+def api_fault_reports(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({'success': False, 'message': '未登录'}, status=401)
+
+    user_id = user_info.get('id')
+
+    reports = FaultReport.objects.filter(
+        reported_by__user_id=user_id
+    ).order_by('-reported_at')
+
+    status_order = {'未处理': 0, '处理中': 1, '已处理': 2}
+    reports = sorted(reports, key=lambda r: status_order.get(r.status, 3))
+
+    data = []
+    for r in reports:
+        data.append({
+            'report_id': r.report_id,
+            'reported_by': getattr(r.reported_by, 'username', '-'),
+            'reported_at': r.reported_at.strftime('%Y-%m-%d %H:%M'),
+            'description': r.description,
+            'status': r.status
+        })
+
+    return JsonResponse({'success': True, 'data': data})
+
+from django.shortcuts import get_object_or_404
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
+
+@require_GET
+def api_fault_detail(request, report_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({
+            'success': False,
+            'message': '未登录'
+        }, status=401)
+
+    user_id = user_info.get('id')
+
+    report = get_object_or_404(
+        FaultReport,
+        report_id=report_id,
+        reported_by_id=user_id
+    )
+
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'report_id': report.report_id,
+
+            # ✅ 任务ID（防止为空）
+            'task_id': report.task_id.task_id if report.task_id else None,
+
+            # ✅ 上报人
+            'reported_by': report.reported_by.username if report.reported_by else None,
+
+            # ✅ 时间
+            'reported_at': report.reported_at.strftime('%Y-%m-%d %H:%M'),
+
+            # ✅ 状态
+            'status': report.status,
+
+            # ✅ 描述
+            'description': report.description,
+        }
+    })
+from django.views.decorators.http import require_POST
+
+@require_POST
+@csrf_exempt
+def api_fault_cancel(request, report_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({'success': False, 'message': '未登录'}, status=401)
+
+    user_id = user_info.get('id')
+
+    try:
+        report = FaultReport.objects.get(
+            report_id=report_id,
+            reported_by_id=user_id
+        )
+
+        # 已处理的不允许撤销
+        if report.status == '已处理':
+            return JsonResponse({
+                'success': False,
+                'message': '已处理的故障无法撤销'
+            })
+
+        # 👉 方式1：直接删除
+        report.delete()
+
+        # 👉 方式2（推荐）：改状态
+        # report.status = '已撤销'
+        # report.save()
+
+        return JsonResponse({'success': True})
+
+    except FaultReport.DoesNotExist:
+        return JsonResponse({'success': False, 'message': '记录不存在'})
+    
+
+from django.http import JsonResponse
+
+def api_running_tasks(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({'success': False, 'message': '未登录'}, status=401)
+
+    user_id = user_info.get('id')
+
+    tasks = Task.objects.filter(
+        assigned_to_id=user_id,
+        task_status='运输中'
+    )
+
+    data = []
+    for t in tasks:
+        data.append({
+            'task_id': t.task_id,
+            'origin_port': t.origin_port,
+            'destination_port': t.destination_port
+        })
+
+    return JsonResponse({'success': True, 'tasks': data})
+
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+
+@require_POST
+@csrf_exempt
+def api_report_fault(request):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({'success': False, 'message': '未登录'}, status=401)
+
+    user_id = user_info.get('id')
+
+    task_id = request.POST.get('task_id')
+    fault_info = request.POST.get('fault_info')
+
+    if not task_id or not fault_info:
+        return JsonResponse({
+            'success': False,
+            'message': '请填写完整'
+        })
+
+    try:
+        user = User.objects.get(user_id=user_id)
+
+        task = Task.objects.get(
+            task_id=task_id,
+            assigned_to=user
+        )
+
+        FaultReport.objects.create(
+            task_id=task,
+            reported_by=user,
+            description=fault_info,
+            reported_at=timezone.now(),
+            status='未处理'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': '提交成功'
+        })
+
+    except Task.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': '任务不属于你'
+        })

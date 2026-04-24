@@ -32,6 +32,15 @@ import Edit_task from '../views/edit_task.vue'
 import Create_task from '../views/create_task.vue'
 import Fault from '../views/fault.vue'
 import Show_fault from '../views/show_fault.vue'
+import Transporter from '../views/transporter.vue'
+import Transporter_update_profile from '../views/transporter_update_profile.vue'
+import Task_center from '../views/task_center.vue'
+import Task_detail from '../views/task_detail.vue'
+import Transporter_show_order from '../views/transporter_show_order.vue'
+import Report_location from '../views/report_location.vue'
+import Falut_center from '../views/falut_center.vue'
+import Fault_detail from '../views/fault_detail.vue'
+import Report_fault from '../views/report_fault.vue'
 
 
 const routes = [
@@ -67,8 +76,16 @@ const routes = [
   {path: '/create_task',component:Create_task},
   {path: '/fault',component:Fault},
   {path: '/fault/:id',component:Show_fault},
-  // {path: '/appointer',component: () => import('../views/appointer.vue')},
-  // {path: '/transporter',component: () => import('../views/transporter.vue')},
+  {path: '/transporter',component:Transporter},
+  {path: '/transporter_update_profile',component:Transporter_update_profile},
+  {path: '/task_center',component:Task_center},
+  {path: '/task_detail/:id',component:Task_detail},
+  {path: '/transporter_show_order/:id',component:Transporter_show_order},
+  {path: '/report_location',component:Report_location},
+  {path: '/fault_center',component:Falut_center},
+  {path: '/fault_detail/:id',component:Fault_detail},
+  {path: '/report_fault',component:Report_fault},
+
 ]
 
 const router = createRouter({

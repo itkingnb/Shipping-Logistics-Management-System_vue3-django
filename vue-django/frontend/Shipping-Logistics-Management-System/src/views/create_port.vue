@@ -1,6 +1,7 @@
 <template>
   <div class="app">
-    <!-- sidebar -->
+
+    <!-- ===== 侧边栏（不动） ===== -->
     <div class="sidebar">
       <div class="logo-container">
         <div class="logo">
@@ -19,87 +20,65 @@
       </ul>
     </div>
 
-    <!-- main -->
-    <div class="main-content">
-      <div class="header">
-        <h1>创建港口</h1>
+    <!-- ===== 主体 ===== -->
+    <div class="main">
 
-        <div class="user-info">
+      <!-- Header -->
+      <div class="header card-shadow">
+        <h2>创建港口</h2>
+
+        <div class="user">
           <img :src="user.avatar || defaultAvatar" />
           <div>
-            <div>{{ user.name }}</div>
-            <div style="font-size:12px;color:#999">{{ user.role }}</div>
+            <div class="name">{{ user.name }}</div>
+            <small>{{ user.role }}</small>
           </div>
         </div>
       </div>
 
-      <!-- card -->
+      <!-- 表单卡片 -->
       <div class="card">
+
         <div class="card-header">
-          <h2>港口基本信息</h2>
+          <h3>港口信息填写</h3>
         </div>
 
         <div class="card-body">
-          <!-- 表单 -->
+
           <form @submit.prevent="submitForm">
 
-            <div class="form-row">
-              <div class="form-group">
-                <label>港口代码 *</label>
-                <input v-model="form.port_code" class="form-control" required />
+            <!-- 分组1 -->
+            <div class="form-block">
+              <div class="form-row">
+                <input v-model="form.port_code" placeholder="港口代码" />
+                <input v-model="form.port_name" placeholder="港口中文名" />
               </div>
 
-              <div class="form-group">
-                <label>港口中文名 *</label>
-                <input v-model="form.port_name" class="form-control" required />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>英文名 *</label>
-                <input v-model="form.port_name_en" class="form-control" required />
-              </div>
-
-              <div class="form-group">
-                <label>城市 *</label>
-                <input v-model="form.city" class="form-control" required />
+              <div class="form-row">
+                <input v-model="form.port_name_en" placeholder="英文名" />
+                <input v-model="form.city" placeholder="城市" />
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label>国家 *</label>
-                <input v-model="form.country" class="form-control" required />
+            <!-- 分组2 -->
+            <div class="form-block">
+              <div class="form-row">
+                <input v-model="form.country" placeholder="国家" />
+                <input v-model="form.longitude" type="number" placeholder="经度" />
               </div>
 
-              <div class="form-group">
-                <label>经度 *</label>
-                <input v-model="form.longitude" type="number" step="0.000001" class="form-control" required />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>纬度 *</label>
-                <input v-model="form.latitude" type="number" step="0.000001" class="form-control" required />
-              </div>
-
-              <div class="form-group">
-                <label>联系人 *</label>
-                <input v-model="form.contact_person" class="form-control" required />
+              <div class="form-row">
+                <input v-model="form.latitude" type="number" placeholder="纬度" />
+                <input v-model="form.contact_person" placeholder="联系人" />
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label>电话 *</label>
-                <input v-model="form.contact_phone" class="form-control" required />
-              </div>
+            <!-- 分组3 -->
+            <div class="form-block">
+              <div class="form-row">
+                <input v-model="form.contact_phone" placeholder="电话" />
 
-              <div class="form-group">
-                <label>状态 *</label>
-                <select v-model="form.status" class="form-control">
+                <select v-model="form.status">
                   <option value="启用">启用</option>
                   <option value="停用">停用</option>
                   <option value="维护中">维护中</option>
@@ -109,9 +88,9 @@
 
             <!-- 按钮 -->
             <div class="button-group">
-              <button class="btn btn-submit">提交</button>
-              <button type="reset" class="btn btn-reset">重置</button>
-              <button type="button" class="btn btn-back" @click="goBack">返回</button>
+              <button class="btn submit">提交</button>
+              <button type="reset" class="btn reset">重置</button>
+              <button type="button" class="btn back" @click="goBack">返回</button>
             </div>
 
           </form>
@@ -124,18 +103,14 @@
 
 <script setup>
 import { reactive, onMounted } from 'vue'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
-import { api,fixAvatar } from "../utils/common.js"
+import axios from 'axios'
+import { api, fixAvatar } from '../utils/common'
+
 const router = useRouter()
 
-const defaultAvatar = 'https://via.placeholder.com/40'
-
-const user = reactive({
-  name: '',
-  role: '',
-  avatar: ''
-})
+const user = reactive({})
+const defaultAvatar = '/avatar.png'
 
 const form = reactive({
   port_code: '',
@@ -156,34 +131,19 @@ const submitForm = async () => {
     alert('创建成功')
     router.push('/port')
   } catch (e) {
-    console.error(e)
     alert('创建失败')
   }
 }
 
-const goBack = () => {
-  router.push('/port')
-}
+const goBack = () => router.push('/port')
 
 onMounted(async () => {
-  const userRes = await api.get('/api/user_info/')
-  user.value = fixAvatar(userRes.data)
-  Object.assign(user, userRes.data)
-  console.log(user)
+  const res = await api.get('/api/user_info/')
+  Object.assign(user, fixAvatar(res.data))
 })
 </script>
 
 <style scoped>
-/* 直接复用你原来的 CSS（略微精简） */
-html, body {
-  margin: 0;
-  padding: 0;
-}
-
-.app {
-  display: flex;
-}
-
 /* ===== 侧边栏整体 ===== */
 .sidebar {
   position: fixed;
@@ -259,22 +219,130 @@ html, body {
   border-left: 4px solid #3182ce;
 }
 /**/
+/* ===== 主体 ===== */
+.main {
+  flex: 1; 
+  margin-left: 240px;
+  padding: 30px;
+  background: #f4f7fb;
+}
 
-.header{display:flex;justify-content:space-between;margin-bottom:20px}
-.user-info{display:flex;align-items:center}
-.user-info img{width:40px;height:40px;border-radius:50%;margin-right:10px}
+/* ===== header ===== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
 
-.card{background:#fff;border-radius:8px}
-.card-header{padding:15px;border-bottom:1px solid #eee}
-.card-body{padding:20px}
+.card-shadow {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
 
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px}
-.form-control{padding:10px;border:1px solid #ddd;border-radius:6px}
+.user {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
 
-.button-group{display:flex;justify-content:center;gap:10px;margin-top:20px}
+.user img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
 
-.btn{padding:8px 18px;border:none;border-radius:6px;color:#fff;cursor:pointer}
-.btn-submit{background:#38a169}
-.btn-reset{background:#dd6b20}
-.btn-back{background:#f59e0b}
+.name { font-weight: 500 }
+
+/* ===== 卡片 ===== */
+.card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 18px 25px;
+  background: #f1f5f9;
+  font-weight: 600;
+}
+
+.card-body {
+  padding: 25px;
+}
+
+/* ===== 表单 ===== */
+.form-block {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+input, select {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+/* 输入框 focus 动效 */
+input:focus, select:focus {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49,130,206,0.15);
+  outline: none;
+}
+
+/* ===== 按钮 ===== */
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* 提交 */
+.submit {
+  background: linear-gradient(135deg,#38a169,#2f855a);
+  color: white;
+}
+
+.submit:hover {
+  transform: translateY(-2px);
+}
+
+/* 重置 */
+.reset {
+  background: #ed8936;
+  color: white;
+}
+
+/* 返回 */
+.back {
+  background: #e2e8f0;
+}
+
+/* hover */
+.btn:hover {
+  opacity: 0.9;
+}
+
 </style>

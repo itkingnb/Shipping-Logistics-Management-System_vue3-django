@@ -96,6 +96,7 @@
 import { ref, reactive, onMounted } from "vue"
 import axios from "axios"
 import { useRouter } from "vue-router"
+import { api, fixAvatar } from "../utils/common.js"
 
 const router = useRouter()
 
@@ -108,10 +109,6 @@ const hasPrevious = ref(false)
 
 const user = reactive({ name: '', role: '', avatar: '' })
 const defaultAvatar = "https://via.placeholder.com/40"
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  withCredentials: true,
-})
 /* ===== CSRF ===== */
 function getCookie(name) {
   let value = null
