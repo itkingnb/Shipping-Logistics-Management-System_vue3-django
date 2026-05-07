@@ -85,8 +85,11 @@ DATABASES = {
         'USER': 'root',
         'PASSWORD': 'Nijiahong123.',
         'HOST': 'localhost',
-        'POST': '3306'
-
+        'POST': '3306',
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+        },
     }
 }
 
@@ -122,8 +125,6 @@ LANGUAGE_CODE = 'zh-hans'
 TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = False
 

@@ -118,6 +118,9 @@ def login(request):
             if not user:
                 return JsonResponse({'success': False, 'msg': '用户不存在'})
 
+            if user.status == '已禁用':
+                return JsonResponse({'success': False, 'msg': '该用户已被禁用'})
+
             role_name = user.role.role_name if user.role else '未知角色'
             request.session['user_info'] = {
                 'id': user.user_id,
@@ -354,10 +357,17 @@ def user_management(request):
 
 @csrf_exempt
 def toggle_user_status(request, user_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({"success": False, "message": "未登录"})
+
+    if user_info.get('role') != '管理员':
+        return JsonResponse({"success": False, "message": "无权限"})
+
     if request.method == "POST":
         try:
             import json
-            data = json.loads(request.body)
+            data = json.loads(request.body.decode('utf-8'))
             action = data.get("action")
             user = User.objects.get(user_id=user_id)
 
@@ -365,7 +375,7 @@ def toggle_user_status(request, user_id):
                 user.status = "已启用"
             else:
                 user.status = "已禁用"
-            user.save()
+            user.save(update_fields=['status'])
 
             return JsonResponse({"success": True, "message": f"用户状态已更新为 {user.status}"})
         except Exception as e:
@@ -2023,49 +2033,50 @@ def api_fault(request, report_id):
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db import connection, transaction
-
 @csrf_exempt
-@transaction.atomic
 def api_fault_process(request, report_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({'error': '未登录'}, status=401)
+
     if request.method != 'POST':
         return JsonResponse({'error': '只允许 POST'}, status=405)
 
-    try:
-        with connection.cursor() as cursor:
-            cursor.callproc('handle_fault_report', [report_id])
+    f = FaultReport.objects.filter(report_id=report_id).first()
+    if not f:
+        return JsonResponse({'error': '故障报告不存在'}, status=404)
 
-        return JsonResponse({
-            'message': '处理成功',
-            'id': report_id
-        })
+    f.status = '处理中'
+    f.save(update_fields=['status'])
 
-    except Exception as e:
-        return JsonResponse({
-            'error': str(e)
-        }, status=500)
-    
+    return JsonResponse({
+        'message': '处理成功',
+        'id': report_id,
+        'status': f.status
+    })
+
 
 @csrf_exempt
-@transaction.atomic
 def api_fault_finish(request, report_id):
+    user_info = request.session.get('user_info')
+    if not user_info:
+        return JsonResponse({'error': '未登录'}, status=401)
+
     if request.method != 'POST':
         return JsonResponse({'error': '只允许 POST'}, status=405)
 
-    try:
-        with connection.cursor() as cursor:
-            cursor.callproc('handle_fault_report', [report_id])
-            # ⚠️ 如果你没有这个存储过程，可以先继续用 handle_fault_report
+    f = FaultReport.objects.filter(report_id=report_id).first()
+    if not f:
+        return JsonResponse({'error': '故障报告不存在'}, status=404)
 
-        return JsonResponse({
-            'message': '已完成',
-            'id': report_id
-        })
+    f.status = '已处理'
+    f.save(update_fields=['status'])
 
-    except Exception as e:
-        return JsonResponse({
-            'error': str(e)
-        }, status=500)
+    return JsonResponse({
+        'message': '已完成',
+        'id': report_id,
+        'status': f.status
+    })
     
 @require_GET
 def transporter_api(request):
