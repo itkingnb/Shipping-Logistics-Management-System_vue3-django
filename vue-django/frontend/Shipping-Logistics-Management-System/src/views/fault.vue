@@ -15,7 +15,7 @@
         <li><router-link to="/assign_orders"><i class="fas fa-clipboard-check"></i><span>订单指派</span></router-link></li>
         <li><router-link to="/task_management"><i class="fas fa-tasks"></i><span>任务管理</span></router-link></li>
         <li><router-link to="/fault" class="active"><i class="fas fa-exclamation-triangle"></i><span>通知中心</span></router-link></li>
-        <li><router-link to="/appointer_update_profile"><i class="fas fa-cog"></i><span>个人设置</span></router-link></li>
+        <li><router-link to="/appointer_update_profile"><i class="fas fa-cog"></i><span>系统设置</span></router-link></li>
       </ul>
     </div>
 
