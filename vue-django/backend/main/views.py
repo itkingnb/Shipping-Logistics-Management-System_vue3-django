@@ -387,7 +387,8 @@ def toggle_user_status(request, user_id):
 def get_profile(request):
     # print(request.session.items())
     # print(request.COOKIES)
-    user_id = request.session.get('user_id')
+    user_info = request.session.get('user_info')
+    user_id=user_info['id']
     # print(user_id)
     if not user_id:
         return JsonResponse({"success": False, "message": "未登录"})
@@ -1582,8 +1583,9 @@ def api_assign_orders(request):
     # 状态排序（关键）
     status_order = {
         '待指派': 0,
-        '运输中': 1,
-        '已完成': 2,
+        '已指派': 1,
+        '运输中': 2,
+        '已完成': 3,
     }
 
     orders = sorted(

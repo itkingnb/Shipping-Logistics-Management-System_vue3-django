@@ -63,7 +63,7 @@
               <td>{{ o.customer_name }}</td>
               <td>{{ o.origin_port }}</td>
               <td>{{ o.destination_port }}</td>
-              <td>{{ o.order_status }}</td>
+              <td><span class="status-badge" :class="statusClass(o.order_status)">{{ o.order_status }}</span></td>
               <td>{{ o.total_amount }}</td>
               <td>{{ o.created_at }}</td>
               <td>{{ o.updated_at }}</td>
@@ -114,7 +114,20 @@ const fetchOrders = async (p = 1) => {
     totalPages.value = res.data.pagination.total_pages
   }
 }
-
+const statusClass = (status) => {
+  switch (status) {
+    case '待指派':
+      return 'status-pending'
+    case '已指派':
+      return 'status-assigned'
+    case '运输中':
+      return 'status-shipping'
+    case '已完成':
+      return 'status-done'
+    default:
+      return ''
+  }
+}
 const loadUser = async () => {
   const res = await api.get('/api/user_info/')
   const fixed = fixAvatar(res.data)
@@ -268,7 +281,37 @@ th, td {
 thead {
   background: #f7fafc;
 }
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
 
+/* 待指派 */
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+/* 已指派 */
+.status-assigned {
+  background: #cce5ff;
+  color: #004085;
+}
+
+/* 运输中 */
+.status-shipping {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+/* 已完成 */
+.status-done {
+  background: #d4edda;
+  color: #155724;
+}
 /* ===== 按钮 ===== */
 .action {
   display: flex;
