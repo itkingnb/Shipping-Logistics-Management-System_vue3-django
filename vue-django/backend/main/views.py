@@ -651,6 +651,7 @@ def customer_detail(request, customer_id):
 def port_list_api(request):
     page = request.GET.get("page", 1)
     keyword = request.GET.get("keyword", "").strip()
+    get_all = request.GET.get("all", "")
 
     qs = Port.objects.all().order_by("port_id")
 
@@ -663,7 +664,10 @@ def port_list_api(request):
             Q(city__icontains=keyword)
         )
 
-    paginator = Paginator(qs, 10)
+    if get_all:
+        paginator = Paginator(qs, qs.count())
+    else:
+        paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(page)
 
     data = []
@@ -763,13 +767,17 @@ def delete_port(request, port_id):
 def cargo_list(request):
     keyword = request.GET.get("keyword", "")
     page = int(request.GET.get("page", 1))
+    get_all = request.GET.get("all", "")
 
     qs = Cargo.objects.all()
 
     if keyword:
         qs = qs.filter(cargo_name__icontains=keyword)
 
-    paginator = Paginator(qs, 10)
+    if get_all:
+        paginator = Paginator(qs, qs.count())
+    else:
+        paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(page)
 
     data = []
@@ -1051,10 +1059,8 @@ def get_port_id(name):
     """根据港口名获取ID（安全版）"""
     if not name:
         return None
-    try:
-        return Port.objects.get(port_name=name).port_id
-    except Port.DoesNotExist:
-        return None
+    p = Port.objects.filter(port_name=name).first()
+    return p.port_id if p else None
 
 def get_order_detail(request, order_id):
     order = Order.objects.filter(order_id=order_id).first()

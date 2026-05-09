@@ -83,7 +83,7 @@
               <td>¥{{ item.total_amount }}</td>
               <td>{{ formatTime(item.created_at) }}</td>
                 <td class="actions">
-                <button class="btn edit" @click="edit(item.order_id)">
+                <button class="btn edit" v-if="canEdit(item.order_status)" @click="edit(item.order_id)">
                     编辑
                 </button>
 
@@ -169,6 +169,11 @@ const statusClass = (s) => {
   if (s === '已完成') return 'tag green'
   if (s === '运输中') return 'tag blue'
   return 'tag orange'
+}
+
+/* ===== 是否可编辑 ===== */
+const canEdit = (s) => {
+  return s === '草稿' || s === '待指派'
 }
 
 /* ===== 跳转 ===== */
