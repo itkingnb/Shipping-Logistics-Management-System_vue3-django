@@ -33,6 +33,15 @@
         </div>
       </div>
 
+      <!-- 日期筛选 -->
+      <div class="date-filter">
+        <label>起始日期：</label>
+        <input type="date" v-model="startDate" @change="loadReport" />
+        <label>结束日期：</label>
+        <input type="date" v-model="endDate" @change="loadReport" />
+        <button class="btn-reset" @click="resetFilter">重置</button>
+      </div>
+
       <!-- KPI -->
       <div class="kpi-container">
         <div class="kpi-card"><div class="kpi-title">用户总数</div><div class="kpi-value">{{ kpi.users }}</div></div>
@@ -73,25 +82,49 @@ const defaultAvatar = 'https://via.placeholder.com/40'
 
 const user = reactive({ name: '', role: '', avatar: '' })
 const kpi = reactive({ users: 0, orders: 0, cargo: 0, tasks: 0 })
+const startDate = ref('')
+const endDate = ref('')
 
 let pieChart = null
 let lineChart = null
 let barChart = null
 
+async function loadReport() {
+  const params = {}
+  if (startDate.value) params.start_date = startDate.value
+  if (endDate.value) params.end_date = endDate.value
+
+  const res = await api.get('/operator/report', { params })
+  const data = res.data
+
+  Object.assign(kpi, data.kpi)
+  await nextTick()
+  initCharts(data)
+}
+
+function resetFilter() {
+  startDate.value = ''
+  endDate.value = ''
+  loadReport()
+}
+
 function initCharts(data) {
+  // 先销毁旧图表
+  pieChart?.dispose()
+  lineChart?.dispose()
+  barChart?.dispose()
+
   const tryInit = () => {
     const pieEl = pieRef.value
     const lineEl = lineRef.value
     const barEl = barRef.value
 
-    // ⚠️ 关键：必须等 DOM 有尺寸
     if (!pieEl || pieEl.clientWidth === 0) {
       requestAnimationFrame(tryInit)
       return
     }
 
     // ===== PIE =====
-    pieChart?.dispose()
     pieChart = echarts.init(pieEl)
     pieChart.setOption({
       tooltip: { trigger: 'item' },
@@ -106,7 +139,6 @@ function initCharts(data) {
     })
 
     // ===== LINE =====
-    lineChart?.dispose()
     lineChart = echarts.init(lineEl)
     lineChart.setOption({
       xAxis: {
@@ -122,7 +154,6 @@ function initCharts(data) {
     })
 
     // ===== BAR =====
-    barChart?.dispose()
     barChart = echarts.init(barEl)
     barChart.setOption({
       xAxis: {
@@ -136,7 +167,6 @@ function initCharts(data) {
       }]
     })
 
-    // resize
     window.addEventListener('resize', () => {
       pieChart?.resize()
       lineChart?.resize()
@@ -146,19 +176,13 @@ function initCharts(data) {
 
   requestAnimationFrame(tryInit)
 }
+
 onMounted(async () => {
-  const res = await api.get('/operator/report')
-  const data = res.data
-
-  Object.assign(kpi, data.kpi)
-
-  await nextTick()
-  initCharts(data)
+  await loadReport()
 
   const userRes = await api.get('/api/user_info/')
   user.value = fixAvatar(userRes.data)
   Object.assign(user, userRes.data)
-  console.log(user)
 })
 </script>
 
@@ -258,6 +282,12 @@ html, body {
 .user-info{display:flex;align-items:center}
 .user-info img{width:40px;height:40px;border-radius:50%;margin-right:10px;border:2px solid var(--accent)}
 .role-text{font-size:12px;color:var(--gray)}
+
+.date-filter{display:flex;align-items:center;gap:10px;margin-bottom:15px;padding:10px 15px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.date-filter label{font-size:14px;color:#666}
+.date-filter input[type="date"]{padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:14px}
+.btn-reset{padding:6px 16px;border:none;border-radius:4px;background:#3182ce;color:#fff;cursor:pointer;font-size:14px}
+.btn-reset:hover{background:#2b6cb0}
 
 .card{background:#fff;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,.05)}
 .card-header{padding:15px;border-bottom:1px solid #eee}

@@ -179,7 +179,7 @@ const remove = async (id) => {
   if (!confirm('确定删除该订单？')) return
 
   try {
-    await axios.delete(`/api/delete_order/${id}/`)
+    await api.delete(`/api/delete_order/${id}/`)
 
     alert('删除成功')
 

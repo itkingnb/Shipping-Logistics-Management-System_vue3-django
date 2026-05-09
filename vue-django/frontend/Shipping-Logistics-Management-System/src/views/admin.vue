@@ -1,7 +1,7 @@
 <template>
   <div class="app">
 
-    <!-- ===== 侧边栏（完全不动） ===== -->
+
     <div class="sidebar">
       <div class="logo-container">
         <div class="logo">
@@ -17,7 +17,7 @@
       </ul>
     </div>
 
-    <!-- ===== 主体（美化重点） ===== -->
+   
     <div class="main-content">
 
       <!-- Header -->
@@ -91,13 +91,13 @@ const kpi = ref({
 const trendRef = ref(null)
 const pieRef = ref(null)
 
-/* ===== 用户 ===== */
+/* 用户*/
 const loadUser = async () => {
   const res = await api.get('/api/user_info/')
   Object.assign(user.value, fixAvatar(res.data))
 }
 
-/* ===== 图表美化 ===== */
+/*图表美化*/
 const initCharts = (data) => {
 
   // 折线图（高级版）
@@ -145,7 +145,7 @@ const initCharts = (data) => {
   })
 }
 
-/* ===== 数据 ===== */
+/*数据*/
 const loadData = async () => {
   const res = await api.get('/api/dashboard/')
   const d = res.data.data

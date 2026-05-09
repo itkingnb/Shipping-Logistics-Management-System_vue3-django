@@ -369,6 +369,10 @@ def toggle_user_status(request, user_id):
             import json
             data = json.loads(request.body.decode('utf-8'))
             action = data.get("action")
+
+            if user_id == user_info.get('id'):
+                return JsonResponse({"success": False, "message": "不能禁用自己的账户"})
+
             user = User.objects.get(user_id=user_id)
 
             if action == "启用":
@@ -418,11 +422,11 @@ def administrator_update_profile(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "非法请求"})
 
-    user_id = request.session.get('user_id')
-    if not user_id:
+    user_info = request.session.get('user_info')
+    if not user_info:
         return JsonResponse({"success": False, "message": "未登录"})
 
-    
+    user_id = user_info.get('id')
 
     try:
         user = User.objects.get(user_id=user_id)
@@ -468,22 +472,31 @@ def administrator_update_profile(request):
 
 from django.db.models.functions import TruncMonth
 def operator_report(request):
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    orders = Order.objects.all()
+    if start_date:
+        orders = orders.filter(created_at__gte=start_date)
+    if end_date:
+        orders = orders.filter(created_at__lte=end_date + ' 23:59:59')
+
     # ===== KPI =====
     total_users = User.objects.count()
-    total_orders = Order.objects.count()
+    total_orders = orders.count()
     total_cargo_types = Cargo.objects.count()
     total_tasks = Task.objects.count()
 
     # ===== 订单状态 =====
     order_status = list(
-        Order.objects
+        orders
         .values('order_status')
         .annotate(count=Count('order_id'))
     )
 
-    # ===== 月度订单（已修复）=====
+    # ===== 月度订单 =====
     monthly_qs = (
-        Order.objects
+        orders
         .annotate(month=TruncMonth('created_at'))
         .values('month')
         .annotate(count=Count('order_id'))
@@ -500,9 +513,10 @@ def operator_report(request):
 
     # ===== 货物 TOP5 =====
     cargo_top = list(
-        Cargo.objects
-        .values('cargo_name')
-        .annotate(total=Count('cargo_id'))
+        OrderCargo.objects
+        .filter(order__in=orders)
+        .values('cargo__cargo_name')
+        .annotate(total=Sum('quantity'))
         .order_by('-total')[:5]
     )
 
