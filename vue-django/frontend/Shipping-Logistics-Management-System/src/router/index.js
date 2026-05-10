@@ -41,11 +41,13 @@ import Report_location from '../views/report_location.vue'
 import Falut_center from '../views/falut_center.vue'
 import Fault_detail from '../views/fault_detail.vue'
 import Report_fault from '../views/report_fault.vue'
+import Register from '../views/register.vue'
 
 
 const routes = [
   {path: '/',component: Login},
   {path: '/retrieve',component: RetrievePassword},
+  {path: '/register',component: Register},
   {path: '/admin',component: Admin},
   {path: '/user_management',component: UserManagement},
   {path: '/administrator_update_profile',component:Administrator_Update_Profile},

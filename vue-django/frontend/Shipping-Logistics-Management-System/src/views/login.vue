@@ -104,7 +104,7 @@ const handleLogin = async () => {
       </button>
 
       <div class="footer">
-        还没有账户？<a href="#">注册</a>
+        还没有账户？<router-link to="/register">注册</router-link>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
 <template>
   <div class="app">
 
-    <!-- ===== 侧边栏（完全不动） ===== -->
+
     <div class="sidebar">
       <div class="logo-container">
         <div class="logo">
@@ -17,7 +17,7 @@
       </ul>
     </div>
 
-    <!-- ===== 主体（美化重点） ===== -->
+   
     <div class="main-content">
 
       <!-- Header -->
@@ -33,10 +33,19 @@
         </div>
       </div>
 
+      <!-- 日期筛选 -->
+      <div class="date-filter">
+        <label>起始日期：</label>
+        <input type="date" v-model="startDate" @change="loadData" />
+        <label>结束日期：</label>
+        <input type="date" v-model="endDate" @change="loadData" />
+        <button class="btn-reset" @click="resetFilter">重置</button>
+      </div>
+
       <!-- KPI -->
       <div class="kpi-container">
         <div class="kpi-card blue">
-          <div>历史订单</div>
+          <div>筛选订单</div>
           <h2>{{ kpi.total_orders }}</h2>
         </div>
 
@@ -90,17 +99,28 @@ const kpi = ref({
 
 const trendRef = ref(null)
 const pieRef = ref(null)
+const startDate = ref('')
+const endDate = ref('')
 
-/* ===== 用户 ===== */
+/* 用户*/
 const loadUser = async () => {
   const res = await api.get('/api/user_info/')
   Object.assign(user.value, fixAvatar(res.data))
 }
 
-/* ===== 图表美化 ===== */
+/*图表美化*/
 const initCharts = (data) => {
+  // 先销毁旧图表
+  if (trendRef.value) {
+    const old = echarts.getInstanceByDom(trendRef.value)
+    if (old) old.dispose()
+  }
+  if (pieRef.value) {
+    const old = echarts.getInstanceByDom(pieRef.value)
+    if (old) old.dispose()
+  }
 
-  // 折线图（高级版）
+  // 折线图
   const trendChart = echarts.init(trendRef.value)
   trendChart.setOption({
     tooltip: { trigger: 'axis' },
@@ -117,13 +137,11 @@ const initCharts = (data) => {
       symbol: 'circle',
       symbolSize: 8,
       lineStyle: { width: 3 },
-      areaStyle: {
-        opacity: 0.2
-      }
+      areaStyle: { opacity: 0.2 }
     }]
   })
 
-  // 饼图（环形 + 动效）
+  // 饼图
   const pieChart = echarts.init(pieRef.value)
   pieChart.setOption({
     tooltip: { trigger: 'item' },
@@ -145,9 +163,13 @@ const initCharts = (data) => {
   })
 }
 
-/* ===== 数据 ===== */
+/*数据*/
 const loadData = async () => {
-  const res = await api.get('/api/dashboard/')
+  const params = {}
+  if (startDate.value) params.start_date = startDate.value
+  if (endDate.value) params.end_date = endDate.value
+
+  const res = await api.get('/api/dashboard/', { params })
   const d = res.data.data
 
   kpi.value.total_orders = d.total_orders
@@ -162,6 +184,12 @@ const loadData = async () => {
 
   await nextTick()
   initCharts(d)
+}
+
+const resetFilter = () => {
+  startDate.value = ''
+  endDate.value = ''
+  loadData()
 }
 
 onMounted(() => {
@@ -200,6 +228,13 @@ onMounted(() => {
 }
 .name { font-weight: 600 }
 .role-text { font-size: 12px; color: #888 }
+
+/* ===== 日期筛选 ===== */
+.date-filter { display:flex; align-items:center; gap:10px; margin-bottom:15px; padding:10px 15px; background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.05) }
+.date-filter label { font-size:14px; color:#666 }
+.date-filter input[type="date"] { padding:6px 10px; border:1px solid #ddd; border-radius:4px; font-size:14px }
+.btn-reset { padding:6px 16px; border:none; border-radius:4px; background:#3182ce; color:#fff; cursor:pointer; font-size:14px }
+.btn-reset:hover { background:#2b6cb0 }
 
 /* ===== KPI ===== */
 .kpi-container {

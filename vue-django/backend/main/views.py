@@ -33,59 +33,111 @@ def check_login(username,password):
             return True
     return False
 
-# @api_view(['POST'])
-# def login(request):
-#     username = request.data.get('username')
-#     password = request.data.get('password')
-#     remember_me = request.data.get('remember')
-#     print(request.method)
-#     print(request.body)
-#     if not username or not password:
-#         return Response({"success": False, "msg": "请输入用户名和密码"})
+import re
+import hashlib
 
-#     if not check_login(username, password):
-#         return Response({"success": False, "msg": "账号或密码错误"})
+from django.utils import timezone
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
-#     # 查用户
-#     if '@' in username:
-#         user = User.objects.filter(email=username).first()
-#     else:
-#         user = User.objects.filter(username=username).first()
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
 
-#     if not user:
-#         return Response({"success": False, "msg": "用户不存在"})
+from .models import User, Role
 
-#     if user.status == "已禁用":
-#         return Response({"success": False, "msg": "该用户已被禁用"})
 
-#     # session（可留）
-#     request.session['user_info'] = {
-#         'id': user.user_id,
-#         'name': user.username,
-#         'role': user.role.role_name if user.role else '未知角色',
-#         'avatar': user.photo,
-#     }
+@api_view(['POST'])
+def register_user(request):
 
-#     if remember_me:
-#         request.session.set_expiry(60 * 60 * 24 * 7)
-#     else:
-#         request.session.set_expiry(0)
+    username = request.data.get('username')
+    telephone = request.data.get('telephone')
+    email = request.data.get('email')
+    role = request.data.get('role')
+    password = request.data.get('password')
+    password2 = request.data.get('password2')
 
-#     # 更新状态
-#     user.last_visit = timezone.now()
-#     user.login_status = True
-#     user.save(update_fields=['last_visit', 'login_status'])
+    errors = []
 
-#     # 返回给前端（重点）
-#     return Response({
-#         "success": True,
-#         "msg": "登录成功",
-#         "user": {
-#             "id": user.user_id,
-#             "name": user.username,
-#             "role": user.role.role_name if user.role else '未知角色',
-#         }
-#     })
+    # 手机号校验
+    if len(telephone) != 11:
+        errors.append("手机号必须是11位")
+
+    elif not telephone.isdigit():
+        errors.append("手机号必须全是数字")
+
+    elif not re.match(r'^1[3-9]\d{9}$', telephone):
+        errors.append("手机号格式不正确")
+
+    elif User.objects.filter(phone=telephone).exists():
+        errors.append("该手机号已被注册")
+
+    # 密码校验
+    if password != password2:
+        errors.append("两次输入的密码不一致")
+
+    else:
+        if len(password) < 6:
+            errors.append("密码长度至少6位")
+
+        if not re.search(r'[a-z]', password):
+            errors.append("密码必须包含小写字母")
+
+        if not re.search(r'[A-Z]', password):
+            errors.append("密码必须包含大写字母")
+
+        if not re.search(r'\d', password):
+            errors.append("密码必须包含数字")
+
+    # 邮箱校验
+    try:
+        validate_email(email)
+    except ValidationError:
+        errors.append("邮箱格式不正确")
+
+    if User.objects.filter(email=email).exists():
+        errors.append("该邮箱已被注册")
+
+    # 用户名校验
+    if User.objects.filter(username=username).exists():
+        errors.append("用户名已存在")
+
+    # 角色校验
+    role_obj = Role.objects.filter(role_name=role).first()
+
+    if not role_obj:
+        errors.append("角色不存在")
+
+    # 返回错误
+    if errors:
+        return Response({
+            'success': False,
+            'errors': errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # 创建用户
+    try:
+        user = User.objects.create(
+            username=username,
+            password=hashlib.sha256(password.encode()).hexdigest(),
+            phone=telephone,
+            email=email,
+            status="启用",
+            create_time=timezone.now(),
+            login_status=False,
+            role_id=role_obj.role_id,
+        )
+
+        return Response({
+            'success': True,
+            'message': '注册成功'
+        })
+
+    except Exception as e:
+        return Response({
+            'success': False,
+            'errors': ['注册失败']
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @csrf_exempt
 def login(request):
@@ -219,48 +271,61 @@ def report_dashboard(request):
     if request.method != 'GET':
         return JsonResponse({"success": False, "msg": "仅支持 GET"})
 
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    orders = Order.objects.all()
+    if start_date:
+        orders = orders.filter(created_at__gte=start_date)
+    if end_date:
+        orders = orders.filter(created_at__lte=end_date + ' 23:59:59')
+
     total_users = User.objects.count()
-    total_orders = Order.objects.count()
+    total_orders = orders.count()
     total_cargo_types = Cargo.objects.count()
 
     cargo_agg = Cargo.objects.aggregate(total=Sum('inventory'))
     cargo_total_amount = cargo_agg.get('total') or 0
 
     order_status_count = list(
-        Order.objects.values('order_status')
+        orders.values('order_status')
         .annotate(count=Count('order_status'))
         .order_by('order_status')
     )
 
+    # 月度订单：有日期筛选时用 ORM 算，无筛选时用视图
     monthly_orders = []
-    cargo_top_5 = []
-
-    with connection.cursor() as cursor:
-
-        cursor.execute("""
-            SELECT month, count 
-            FROM v_report_monthly_orders 
-            ORDER BY month
-        """)
-        rows = cursor.fetchall()
-        for row in rows:
+    if start_date or end_date:
+        monthly_qs = (
+            orders
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(count=Count('order_id'))
+            .order_by('month')
+        )
+        for item in monthly_qs:
             monthly_orders.append({
-                'month': row[0],
-                'count': row[1]
+                'month': item['month'].strftime('%Y-%m') if item['month'] else '',
+                'count': item['count']
             })
+    else:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT month, count FROM v_report_monthly_orders ORDER BY month
+            """)
+            for row in cursor.fetchall():
+                monthly_orders.append({'month': row[0], 'count': row[1]})
 
+    cargo_top_5 = []
+    with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT cargo_name, total_inventory 
-            FROM v_report_cargo_stats 
-            ORDER BY total_inventory DESC 
+            SELECT cargo_name, total_inventory
+            FROM v_report_cargo_stats
+            ORDER BY total_inventory DESC
             LIMIT 5
         """)
-        rows = cursor.fetchall()
-        for row in rows:
-            cargo_top_5.append({
-                'cargo_name': row[0],
-                'total': row[1]
-            })
+        for row in cursor.fetchall():
+            cargo_top_5.append({'cargo_name': row[0], 'total': row[1]})
 
     return JsonResponse({
         "success": True,
@@ -369,6 +434,10 @@ def toggle_user_status(request, user_id):
             import json
             data = json.loads(request.body.decode('utf-8'))
             action = data.get("action")
+
+            if user_id == user_info.get('id'):
+                return JsonResponse({"success": False, "message": "不能禁用自己的账户"})
+
             user = User.objects.get(user_id=user_id)
 
             if action == "启用":
@@ -418,11 +487,11 @@ def administrator_update_profile(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "非法请求"})
 
-    user_id = request.session.get('user_id')
-    if not user_id:
+    user_info = request.session.get('user_info')
+    if not user_info:
         return JsonResponse({"success": False, "message": "未登录"})
 
-    
+    user_id = user_info.get('id')
 
     try:
         user = User.objects.get(user_id=user_id)
@@ -468,22 +537,31 @@ def administrator_update_profile(request):
 
 from django.db.models.functions import TruncMonth
 def operator_report(request):
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    orders = Order.objects.all()
+    if start_date:
+        orders = orders.filter(created_at__gte=start_date)
+    if end_date:
+        orders = orders.filter(created_at__lte=end_date + ' 23:59:59')
+
     # ===== KPI =====
     total_users = User.objects.count()
-    total_orders = Order.objects.count()
+    total_orders = orders.count()
     total_cargo_types = Cargo.objects.count()
     total_tasks = Task.objects.count()
 
     # ===== 订单状态 =====
     order_status = list(
-        Order.objects
+        orders
         .values('order_status')
         .annotate(count=Count('order_id'))
     )
 
-    # ===== 月度订单（已修复）=====
+    # ===== 月度订单 =====
     monthly_qs = (
-        Order.objects
+        orders
         .annotate(month=TruncMonth('created_at'))
         .values('month')
         .annotate(count=Count('order_id'))
@@ -500,9 +578,10 @@ def operator_report(request):
 
     # ===== 货物 TOP5 =====
     cargo_top = list(
-        Cargo.objects
-        .values('cargo_name')
-        .annotate(total=Count('cargo_id'))
+        OrderCargo.objects
+        .filter(order__in=orders)
+        .values('cargo__cargo_name')
+        .annotate(total=Sum('quantity'))
         .order_by('-total')[:5]
     )
 
@@ -637,6 +716,7 @@ def customer_detail(request, customer_id):
 def port_list_api(request):
     page = request.GET.get("page", 1)
     keyword = request.GET.get("keyword", "").strip()
+    get_all = request.GET.get("all", "")
 
     qs = Port.objects.all().order_by("port_id")
 
@@ -649,7 +729,10 @@ def port_list_api(request):
             Q(city__icontains=keyword)
         )
 
-    paginator = Paginator(qs, 10)
+    if get_all:
+        paginator = Paginator(qs, qs.count())
+    else:
+        paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(page)
 
     data = []
@@ -749,13 +832,17 @@ def delete_port(request, port_id):
 def cargo_list(request):
     keyword = request.GET.get("keyword", "")
     page = int(request.GET.get("page", 1))
+    get_all = request.GET.get("all", "")
 
     qs = Cargo.objects.all()
 
     if keyword:
         qs = qs.filter(cargo_name__icontains=keyword)
 
-    paginator = Paginator(qs, 10)
+    if get_all:
+        paginator = Paginator(qs, qs.count())
+    else:
+        paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(page)
 
     data = []
@@ -1037,10 +1124,8 @@ def get_port_id(name):
     """根据港口名获取ID（安全版）"""
     if not name:
         return None
-    try:
-        return Port.objects.get(port_name=name).port_id
-    except Port.DoesNotExist:
-        return None
+    p = Port.objects.filter(port_name=name).first()
+    return p.port_id if p else None
 
 def get_order_detail(request, order_id):
     order = Order.objects.filter(order_id=order_id).first()

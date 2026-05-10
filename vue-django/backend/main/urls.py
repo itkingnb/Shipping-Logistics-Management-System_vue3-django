@@ -68,4 +68,5 @@ urlpatterns = [
     path('fault_cancel/<int:report_id>/', views.api_fault_cancel),
     path('running_tasks/', views.api_running_tasks),
     path('report_fault/', views.api_report_fault),
+    path('register/', views.register_user),
 ]
