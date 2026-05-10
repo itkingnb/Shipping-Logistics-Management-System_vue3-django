@@ -219,48 +219,61 @@ def report_dashboard(request):
     if request.method != 'GET':
         return JsonResponse({"success": False, "msg": "仅支持 GET"})
 
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    orders = Order.objects.all()
+    if start_date:
+        orders = orders.filter(created_at__gte=start_date)
+    if end_date:
+        orders = orders.filter(created_at__lte=end_date + ' 23:59:59')
+
     total_users = User.objects.count()
-    total_orders = Order.objects.count()
+    total_orders = orders.count()
     total_cargo_types = Cargo.objects.count()
 
     cargo_agg = Cargo.objects.aggregate(total=Sum('inventory'))
     cargo_total_amount = cargo_agg.get('total') or 0
 
     order_status_count = list(
-        Order.objects.values('order_status')
+        orders.values('order_status')
         .annotate(count=Count('order_status'))
         .order_by('order_status')
     )
 
+    # 月度订单：有日期筛选时用 ORM 算，无筛选时用视图
     monthly_orders = []
-    cargo_top_5 = []
-
-    with connection.cursor() as cursor:
-
-        cursor.execute("""
-            SELECT month, count 
-            FROM v_report_monthly_orders 
-            ORDER BY month
-        """)
-        rows = cursor.fetchall()
-        for row in rows:
+    if start_date or end_date:
+        monthly_qs = (
+            orders
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(count=Count('order_id'))
+            .order_by('month')
+        )
+        for item in monthly_qs:
             monthly_orders.append({
-                'month': row[0],
-                'count': row[1]
+                'month': item['month'].strftime('%Y-%m') if item['month'] else '',
+                'count': item['count']
             })
+    else:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT month, count FROM v_report_monthly_orders ORDER BY month
+            """)
+            for row in cursor.fetchall():
+                monthly_orders.append({'month': row[0], 'count': row[1]})
 
+    cargo_top_5 = []
+    with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT cargo_name, total_inventory 
-            FROM v_report_cargo_stats 
-            ORDER BY total_inventory DESC 
+            SELECT cargo_name, total_inventory
+            FROM v_report_cargo_stats
+            ORDER BY total_inventory DESC
             LIMIT 5
         """)
-        rows = cursor.fetchall()
-        for row in rows:
-            cargo_top_5.append({
-                'cargo_name': row[0],
-                'total': row[1]
-            })
+        for row in cursor.fetchall():
+            cargo_top_5.append({'cargo_name': row[0], 'total': row[1]})
 
     return JsonResponse({
         "success": True,
