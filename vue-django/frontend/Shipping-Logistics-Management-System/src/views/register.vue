@@ -142,7 +142,6 @@ import { api } from '../utils/common'
 
 const router = useRouter()
 
-// 角色列表
 const roles = ref([
   '管理员',
   '操作员',
@@ -150,14 +149,10 @@ const roles = ref([
   '运输员'
 ])
 
-// 密码显示
 const showPassword = ref(false)
 const showPassword2 = ref(false)
 
-// 错误信息
 const errors = ref([])
-
-// 表单数据
 const form = ref({
   username: '',
   telephone: '',
@@ -167,37 +162,22 @@ const form = ref({
   password2: ''
 })
 
-// 注册
 const handleRegister = async () => {
-
   errors.value = []
-
   try {
-
     const res = await api.post(
       'http://127.0.0.1:8000/api/register/',
       form.value
     )
-
     alert(res.data.message)
-
-    // 注册成功跳转登录页
     router.push('/')
-
   } catch (err) {
-
     if (err.response) {
-
       errors.value = err.response.data.errors
-
     } else {
-
       errors.value = ['服务器异常']
-
     }
-
   }
-
 }
 </script>
 

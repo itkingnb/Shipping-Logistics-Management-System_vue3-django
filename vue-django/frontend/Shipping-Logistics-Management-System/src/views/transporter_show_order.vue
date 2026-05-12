@@ -246,6 +246,7 @@ onMounted(() => {
   flex: 1;
   padding: 20px;
   background: #f4f7fb;
+  margin-left: 240px;
 }
 
 /* header */

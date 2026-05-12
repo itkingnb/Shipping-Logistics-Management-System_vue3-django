@@ -338,7 +338,7 @@ def report_dashboard(request):
             "monthly_orders": monthly_orders,
             "cargo_top_5": cargo_top_5,
         }
-    })
+    })#
 
 from django.http import JsonResponse
 from django.core.paginator import Paginator

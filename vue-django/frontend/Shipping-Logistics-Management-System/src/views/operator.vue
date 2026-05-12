@@ -141,6 +141,9 @@ function initCharts(data) {
     // ===== LINE =====
     lineChart = echarts.init(lineEl)
     lineChart.setOption({
+      tooltip: {
+        trigger: 'axis'
+      },
       xAxis: {
         type: 'category',
         data: data.monthly_orders.map(i => i.month)
@@ -156,9 +159,12 @@ function initCharts(data) {
     // ===== BAR =====
     barChart = echarts.init(barEl)
     barChart.setOption({
+      tooltip: {
+        trigger: 'axis'
+      },
       xAxis: {
         type: 'category',
-        data: data.cargo_top.map(i => i.cargo_name)
+        data: data.cargo_top.map(i => i.cargo__cargo_name)
       },
       yAxis: { type: 'value' },
       series: [{
