@@ -185,11 +185,8 @@ const remove = async (id) => {
 
   try {
     await api.delete(`/api/delete_order/${id}/`)
-
     alert('删除成功')
-
     load()  // 重新加载列表
-
   } catch (err) {
     console.error(err)
 
@@ -271,7 +268,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;   
 
   width: 100%;
   height: 48px;
@@ -359,7 +356,7 @@ html, body {
   border: none;
   cursor: pointer;
   transition: all 0.2s;
-  white-space: nowrap; /* ⭐防止换行 */
+  white-space: nowrap;
 }
 
 .btn.primary {
@@ -425,7 +422,7 @@ th, td {
   border-bottom: 1px solid #eee;
   text-align: left;
 
-  white-space: nowrap;   /* ⭐关键：禁止换行 */
+  white-space: nowrap; 
 }
 
 tr:hover {
@@ -437,24 +434,24 @@ tr:hover {
   display: flex;
   gap: 8px;
   align-items: center;
-  white-space: nowrap; /* ⭐不换行 */
+  white-space: nowrap; 
 }
 
 /* ===== 状态标签 ===== */
 .tag {
-  display: inline-flex;          /* ⭐关键：用flex居中 */
+  display: inline-flex;  
   align-items: center;
   justify-content: center;
 
-  min-width: 64px;               /* ⭐统一宽度（核心） */
-  height: 24px;                  /* ⭐统一高度 */
+  min-width: 64px;          
+  height: 24px;              
 
   padding: 0 8px;                /* 左右留白 */
   border-radius: 6px;
 
   color: white;
   font-size: 12px;
-  line-height: 1;                /* ⭐防止文字上下偏 */
+  line-height: 1;             
   white-space: nowrap;           /* 防止换行 */
 }
 

@@ -98,7 +98,7 @@
             </tbody>
           </table>
 
-          <!-- ✅ 分页 -->
+          <!--  分页 -->
           <div class="pagination">
             <button 
               class="btn" 
@@ -134,10 +134,8 @@ import { useRouter } from 'vue-router'
 import { api, fixAvatar } from '../utils/common.js'
 
 const router = useRouter()
-
 const tasks = ref([])
 const keyword = ref('')
-
 const page = ref(1)
 const totalPages = ref(1)
 
@@ -158,7 +156,7 @@ const load = async () => {
 }
 
 const search = () => {
-  page.value = 1   // ✅ 搜索重置到第一页
+  page.value = 1 
   load()
 }
 
@@ -181,7 +179,7 @@ const goEdit = (id) => router.push(`/edit_task/${id}`)
 const badgeClass = (s) => {
   if (s === '已完成') return 'badge green'
   if (s === '运输中') return 'badge blue'
-  if (s === '待处理') return 'badge orange'  // ✅ 修复
+  if (s === '待处理') return 'badge orange' 
   return 'badge gray'
 }
 

@@ -211,7 +211,7 @@ onMounted(() => {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;   /*  文字整体居中 */
 
   width: 100%;
   height: 48px;

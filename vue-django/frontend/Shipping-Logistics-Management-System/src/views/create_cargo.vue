@@ -94,23 +94,12 @@ import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 
 /* ===== 用户 ===== */
-const user = reactive({
-  name: "",
-  role: "",
-  avatar: ""
-})
+const user = reactive({name: "",role: "",avatar: ""})
 
 const defaultAvatar = "https://via.placeholder.com/40"
 
 /* ===== 表单 ===== */
-const form = reactive({
-  cargo_name: "",
-  cargo_type: "",
-  cargo_weight: "",
-  cargo_volume: "",
-  inventory: "",
-  cargo_amount: ""
-})
+const form = reactive({cargo_name: "",cargo_type: "",cargo_weight: "",cargo_volume: "",inventory: "",cargo_amount: ""})
 
 /* ===== CSRF ===== */
 function getCookie(name) {
@@ -217,7 +206,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center; 
 
   width: 100%;
   height: 48px;

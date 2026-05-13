@@ -106,7 +106,6 @@ const page = ref(1)
 const totalPages = ref(1)
 const hasNext = ref(false)
 const hasPrevious = ref(false)
-
 const user = reactive({ name: '', role: '', avatar: '' })
 const defaultAvatar = "https://via.placeholder.com/40"
 /* ===== CSRF ===== */
@@ -228,7 +227,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center; 
 
   width: 100%;
   height: 48px;

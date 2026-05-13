@@ -950,7 +950,7 @@ def get_orders_sorted_from_view(keyword=''):
 
     qs = Order.objects.all()
 
-    # 🔥 状态排序权重
+    #   状态排序权重
     qs = qs.annotate(
         status_order=Case(
             When(order_status='草稿', then=Value(0)),
@@ -961,9 +961,9 @@ def get_orders_sorted_from_view(keyword=''):
             default=Value(5),
             output_field=IntegerField()
         )
-    ).order_by('status_order', '-created_at')  # ⭐先按状态，再按时间
+    ).order_by('status_order', '-created_at')  # 先按状态，再按时间
 
-    # 🔍 搜索
+    #  搜索
     if keyword:
         qs = qs.filter(
             Q(customer__customer_name__icontains=keyword) |
@@ -1146,18 +1146,18 @@ def get_order_detail(request, order_id):
     return JsonResponse({
         "order_id": order.order_id,
 
-        # ✅ 客户（关键）
+        #  客户（关键）
         "customer": order.customer.customer_id if order.customer else None,
         "customer_name": order.customer.customer_name if order.customer else None,
 
-        # ✅ 港口（兼容你现在的字符串设计）
+        #  港口（兼容你现在的字符串设计）
         "origin_port": get_port_id(order.origin_port),
         "origin_port_name": order.origin_port,
 
         "destination_port": get_port_id(order.destination_port),
         "destination_port_name": order.destination_port,
 
-        # ✅ 货物
+        #  货物
         "cargo_list": cargo_list
     })
 
@@ -1850,7 +1850,7 @@ def api_tasks(request):
     if keyword:
         qs = qs.filter(task_id__icontains=keyword)
 
-    # ✅ 自定义排序
+    #  自定义排序
     qs = qs.order_by(
         Case(
             When(task_status='草稿', then=Value(1)),
@@ -1962,7 +1962,7 @@ def get_task_detail(request, task_id):
 
 
 def get_task_meta(request):
-    users = User.objects.filter(role_id=4)  # ✅ 只要运输员
+    users = User.objects.filter(role_id=4)  #  只要运输员
     ports = Port.objects.all()
 
     return JsonResponse({
@@ -2361,7 +2361,7 @@ def transporter_show_task_api(request, task_id):
 
     task = get_object_or_404(Task, pk=task_id)
 
-    # ✅ 任务基本信息
+    #  任务基本信息
     task_data = {
         "task_id": task.task_id,
         "status": task.task_status,
@@ -2373,7 +2373,7 @@ def transporter_show_task_api(request, task_id):
         "assigned_to": task.assigned_to.username if task.assigned_to else "未指派",
     }
 
-    # ✅ 订单
+    #  订单
     orders_qs = task.orders.select_related('customer').all()
     orders_data = []
     for o in orders_qs:
@@ -2387,7 +2387,7 @@ def transporter_show_task_api(request, task_id):
             "created_at": o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else None,
         })
 
-    # ✅ 轨迹
+    #  轨迹
     tracks_qs = Track.objects.filter(task=task).order_by('-recorded_at')
     tracks_data = []
     for t in tracks_qs:
@@ -2461,7 +2461,7 @@ def accept_task_api(request, task_id):
 
     task = get_object_or_404(Task, task_id=task_id, assigned_to_id=user_id)
 
-    # ✅ 只有待处理才能接
+    #  只有待处理才能接
     if task.task_status != '待处理':
         return JsonResponse({
             "success": False,
@@ -2657,19 +2657,19 @@ def api_fault_detail(request, report_id):
         'data': {
             'report_id': report.report_id,
 
-            # ✅ 任务ID（防止为空）
+            #  任务ID（防止为空）
             'task_id': report.task_id.task_id if report.task_id else None,
 
-            # ✅ 上报人
+            #  上报人
             'reported_by': report.reported_by.username if report.reported_by else None,
 
-            # ✅ 时间
+            #  时间
             'reported_at': report.reported_at.strftime('%Y-%m-%d %H:%M'),
 
-            # ✅ 状态
+            #  状态
             'status': report.status,
 
-            # ✅ 描述
+            #  描述
             'description': report.description,
         }
     })
@@ -2697,10 +2697,10 @@ def api_fault_cancel(request, report_id):
                 'message': '已处理的故障无法撤销'
             })
 
-        # 👉 方式1：直接删除
+        #   方式1：直接删除
         report.delete()
 
-        # 👉 方式2（推荐）：改状态
+        #  方式2（推荐）：改状态
         # report.status = '已撤销'
         # report.save()
 

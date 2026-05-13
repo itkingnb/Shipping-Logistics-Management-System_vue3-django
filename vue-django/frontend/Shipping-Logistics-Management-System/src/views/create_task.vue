@@ -118,23 +118,12 @@ import { api ,fixAvatar} from '../utils/common.js'
 
 const router = useRouter()
 
-const user = reactive({
-  name: '',
-  role: '',
-  avatar: ''
-})
+const user = reactive({name: '',role: '',avatar: ''})
 const users = ref([])
 const ports = ref([])
 const orders = ref([])
 
-const form = ref({
-  order_id: '',
-  assigned_to: '',
-  origin_port: '',
-  destination_port: '',
-  start_time: '',
-  task_status: '待处理'
-})
+const form = ref({order_id: '',assigned_to: '',origin_port: '',destination_port: '',start_time: '',task_status: '待处理'})
 
 const load = async () => {
   const res = await api.get('/api/task/create/meta/')
@@ -228,7 +217,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;  
 
   width: 100%;
   height: 48px;

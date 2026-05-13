@@ -93,12 +93,11 @@ import { api, fixAvatar } from '../utils/common.js'
 
 const route = useRoute()
 const router = useRouter()
-
 const order = ref({})
 const tasks = ref([])
 const selectedTask = ref('')
-
 const user = reactive({ name: '', role: '', avatar: '' })
+
 const loadUser = async () => {
   const res = await api.get('/api/user_info/')
   const fixed = fixAvatar(res.data)

@@ -100,7 +100,6 @@ import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { api, fixAvatar } from "../utils/common.js"
 const router = useRouter()
-
 const user = ref({})
 const file = ref(null)
 const preview = ref('')
@@ -118,7 +117,6 @@ const load = async () => {
 
 /* 头像上传 */
 const triggerFile = () => fileInput.value.click()
-
 const onFileChange = (e) => {
   file.value = e.target.files[0]
   preview.value = URL.createObjectURL(file.value)
@@ -130,13 +128,10 @@ const submit = async () => {
   form.append('username', user.value.username)
   form.append('phone', user.value.phone)
   form.append('email', user.value.email)
-
   if (file.value) {
     form.append('avatar', file.value)
   }
-
   const res = await api.post('/api/appointer_update_profile/', form)
-
   if (res.data.success) {
     alert('更新成功')
     load()
@@ -210,7 +205,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;   /*  文字整体居中 */
 
   width: 100%;
   height: 48px;

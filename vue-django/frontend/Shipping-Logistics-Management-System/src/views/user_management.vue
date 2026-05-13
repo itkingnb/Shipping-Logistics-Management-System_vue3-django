@@ -136,11 +136,7 @@ const pagination = ref({
   has_previous: false
 })
 
-const user = ref({
-  name: '管理员',
-  role: '系统管理员',
-  avatar: '/avatar.png'
-})
+const user = ref({name: '',role: '',avatar: ''})
 
 const go = (path) => {
   router.push(path)
@@ -254,7 +250,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;   /*  文字整体居中 */
 
   width: 100%;
   height: 48px;
@@ -295,13 +291,13 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;           /* ⭐给一点间距 */
+  gap: 10px;           /* 给一点间距 */
 }
 
 .card-header h2 {
   font-size: 18px;
   white-space: nowrap;
-  flex-shrink: 0;      /* ⭐不允许被压缩 */
+  flex-shrink: 0;   
 }
 
 .card-body{padding:15px}

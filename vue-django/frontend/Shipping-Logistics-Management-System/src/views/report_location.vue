@@ -95,11 +95,7 @@ const router = useRouter()
 
 const tasks = ref([])
 const user = reactive({})
-const form = reactive({
-  task_id: '',
-  latitude: '',
-  longitude: ''
-})
+const form = reactive({task_id: '',latitude: '',longitude: ''})
 
 const defaultAvatar = '/avatar.png'
 const now = new Date().toLocaleString()

@@ -104,7 +104,6 @@ import axios from 'axios'
 import { api, fixAvatar } from "../utils/common.js"
 
 const router = useRouter()
-
 const tasks = ref([])
 const user = reactive({ name: '', role: '', avatar: '' })
 const defaultAvatar = '/avatar.png'
@@ -120,11 +119,11 @@ const loadTasks = async () => {
   try {
     const res = await api.get('/api/task_center/')
     // console.log(res)
-    tasks.value = res.data.data || []   // ⭐关键兜底
+    tasks.value = res.data.data || [] 
     // console.log(tasks)
   } catch (e) {
     console.error(e)
-    tasks.value = []                     // ⭐防炸
+    tasks.value = []                 
   }
 }
 
@@ -200,7 +199,7 @@ onMounted(() => {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;  
 
   width: 100%;
   height: 48px;
@@ -233,7 +232,7 @@ onMounted(() => {
 /* ===== 主体 ===== */
 .main-content {
   margin-left: 240px;
-  padding: 16px 20px;   /* ❗从30改小 */
+  padding: 16px 20px;  
 }
 
 /* ===== Header ===== */
@@ -293,12 +292,12 @@ onMounted(() => {
 }
 
 .card-body {
-  padding: 16px;   /* ❗从25改小 */
+  padding: 16px;   
 }
 
 /* ===== 表格 ===== */
 .table {
-  border-spacing: 0 6px;  /* ❗原来10，缩小 */
+  border-spacing: 0 6px;
 }
 
 .table thead th {
@@ -317,7 +316,7 @@ onMounted(() => {
 }
 
 .table td {
-  padding: 10px 8px;   /* ❗更紧凑 */
+  padding: 10px 8px;  
   font-size: 13px;
 }
 

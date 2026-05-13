@@ -81,9 +81,7 @@ import { api, fixAvatar } from '../utils/common.js'
 
 const route = useRoute()
 const router = useRouter()
-
 const taskId = route.params.id
-
 const tracks = ref([])
 const user = reactive({ name: '', role: '', avatar: '' })
 

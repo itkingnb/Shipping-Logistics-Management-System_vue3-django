@@ -90,19 +90,12 @@ import { ref, onMounted, nextTick } from 'vue'
 import { api, fixAvatar } from "../utils/common.js"
 
 const user = ref({})
-const kpi = ref({
-  total_orders: 0,
-  total_value: 0,
-  in_transit: 0,
-  rate: 0
-})
-
+const kpi = ref({total_orders: 0,total_value: 0,in_transit: 0,rate: 0})
 const trendRef = ref(null)
 const pieRef = ref(null)
 const startDate = ref('')
 const endDate = ref('')
 
-/* 用户*/
 const loadUser = async () => {
   const res = await api.get('/api/user_info/')
   Object.assign(user.value, fixAvatar(res.data))
@@ -168,20 +161,15 @@ const loadData = async () => {
   const params = {}
   if (startDate.value) params.start_date = startDate.value
   if (endDate.value) params.end_date = endDate.value
-
   const res = await api.get('/api/dashboard/', { params })
   const d = res.data.data
-
   kpi.value.total_orders = d.total_orders
   kpi.value.total_value = d.cargo_total_amount
-
   const done = d.order_status_count.find(i => i.order_status === '已完成')
   const total = d.total_orders || 1
   kpi.value.rate = done ? Math.round(done.count / total * 100) : 0
-
   const transit = d.order_status_count.find(i => i.order_status === '运输中')
   kpi.value.in_transit = transit ? transit.count : 0
-
   await nextTick()
   initCharts(d)
 }

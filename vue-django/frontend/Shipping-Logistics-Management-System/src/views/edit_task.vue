@@ -111,14 +111,7 @@ const router = useRouter()
 
 const user = reactive({ name: '', role: '', avatar: '' })
 
-const form = reactive({
-  task_id: '',
-  assigned_to: '',
-  origin_port: '',
-  destination_port: '',
-  start_time: '',
-  task_status: ''
-})
+const form = reactive({task_id: '',assigned_to: '',origin_port: '',destination_port: '',start_time: '',task_status: ''})
 
 const users = ref([])
 const ports = ref([])

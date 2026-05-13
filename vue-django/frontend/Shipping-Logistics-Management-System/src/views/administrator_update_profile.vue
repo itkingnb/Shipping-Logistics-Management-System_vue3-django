@@ -110,11 +110,9 @@ const load = async () => {
   try {
     const res = await api.get('/api/get_profile/')
     console.log('接口返回:', res)
-
     if (res.data.success) {
       const data = fixAvatar(res.data.data)
       console.log('处理后数据:', data)
-
       user.value = data
       localStorage.setItem('user', JSON.stringify(data))
     } else {
@@ -158,7 +156,6 @@ const submit = async () => {
   }
 }
 
-// 退出
 const logout = () => {
   localStorage.removeItem('user')
   router.push('/')
@@ -224,8 +221,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
-
+  justify-content: center;  
   width: 100%;
   height: 48px;
 

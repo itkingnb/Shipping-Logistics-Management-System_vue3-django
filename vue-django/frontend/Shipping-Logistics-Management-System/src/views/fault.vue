@@ -114,11 +114,7 @@ import { api, fixAvatar } from '../utils/common.js'
 const router = useRouter()
 
 const faults = ref([])
-const user = reactive({
-  name: '',
-  role: '',
-  avatar: ''
-})
+const user = reactive({name: '',role: '',avatar: ''})
 
 // ===== 加载数据 =====
 const load = async () => {

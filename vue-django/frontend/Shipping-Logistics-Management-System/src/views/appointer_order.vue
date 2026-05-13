@@ -92,16 +92,11 @@
 <script setup>
 import { ref,reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
 import { api, fixAvatar } from "../utils/common.js"
-
 const user = reactive({ name: '', role: '', avatar: '' })
-
 const route = useRoute()
 const router = useRouter()
-
 const order = ref({ cargos: [] })
-
 const load = async () => {
   const id = route.params.id
   const res = await api.get(`/api/appointer_order/${id}/`)
@@ -181,7 +176,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;   /*  文字整体居中 */
 
   width: 100%;
   height: 48px;

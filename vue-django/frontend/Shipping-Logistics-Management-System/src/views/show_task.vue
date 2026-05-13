@@ -120,7 +120,6 @@ import { api, fixAvatar } from '../utils/common.js'
 
 const route = useRoute()
 const router = useRouter()
-
 const task = ref({})
 const orders = ref([])
 const user = reactive({ name: '', role: '', avatar: '' })

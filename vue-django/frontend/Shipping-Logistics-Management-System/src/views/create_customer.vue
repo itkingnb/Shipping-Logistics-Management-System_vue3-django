@@ -89,23 +89,11 @@ const router = useRouter()
 
 const defaultAvatar = 'https://via.placeholder.com/40'
 
-const user = reactive({
-  name: '',
-  role: '',
-  avatar: ''
-})
+const user = reactive({name: '',role: '',avatar: ''})
 
-const form = reactive({
-  customer_name: '',
-  customer_phone: '',
-  customer_email: '',
-  customer_address: ''
-})
+const form = reactive({customer_name: '',customer_phone: '',customer_email: '',customer_address: ''})
 
-const msg = reactive({
-  text: '',
-  type: ''
-})
+const msg = reactive({text: '',type: ''})
 
 const showMsg = (text, type = 'success') => {
   msg.text = text
@@ -132,7 +120,7 @@ const submitForm = async () => {
       return
     }
 
-    await axios.post('/api/create_customer/', form)
+    await api.post('/api/create_customer/', form)
 
     showMsg('客户创建成功')
 
@@ -208,7 +196,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;
 
   width: 100%;
   height: 48px;

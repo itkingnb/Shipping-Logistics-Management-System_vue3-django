@@ -117,7 +117,6 @@ const loadData = async (p = 1) => {
   hasNext.value = res.data.has_next
   hasPrevious.value = res.data.has_previous
 }
-
 const edit = (id) => {
   router.push(`/port/edit/${id}`)
 }
@@ -206,7 +205,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;   /*  文字整体居中 */
 
   width: 100%;
   height: 48px;

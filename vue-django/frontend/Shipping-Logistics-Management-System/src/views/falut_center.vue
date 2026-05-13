@@ -146,7 +146,6 @@ if (res.data.success) {
 const view = (id) => {
   router.push(`/fault_detail/${id}`)
 }
-
 onMounted(() => {
   loadUser()
   loadReports()

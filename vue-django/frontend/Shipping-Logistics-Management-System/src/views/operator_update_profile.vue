@@ -101,7 +101,7 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
+import { api,fixAvatar } from "../utils/common.js"
 const router = useRouter()
 
 const user = ref({})
@@ -109,20 +109,9 @@ const file = ref(null)
 const preview = ref('')
 const defaultAvatar = '/avatar.png'
 const fileInput = ref(null)
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  withCredentials: true,
-})
 // 跳转
 const go = (path) => router.push(path)
 
-// 修正头像路径
-const fixAvatar = (u) => {
-  if (u.avatar && !u.avatar.startsWith('http')) {
-    u.avatar = 'http://127.0.0.1:8000/' + u.avatar
-  }
-  return u
-}
 
 // 加载数据（改接口）
 const load = async () => {
@@ -225,7 +214,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;  
 
   width: 100%;
   height: 48px;

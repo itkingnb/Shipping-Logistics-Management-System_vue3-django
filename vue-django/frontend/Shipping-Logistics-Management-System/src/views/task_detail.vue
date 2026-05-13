@@ -166,7 +166,6 @@ import { api, fixAvatar } from "../utils/common.js"
 
 const route = useRoute()
 const router = useRouter()
-
 const task = reactive({})
 const orders = ref([])
 const tracks = ref([])
@@ -277,7 +276,7 @@ onMounted(() => {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;  
 
   width: 100%;
   height: 48px;

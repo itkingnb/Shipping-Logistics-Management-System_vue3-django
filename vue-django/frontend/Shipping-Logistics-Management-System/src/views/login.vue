@@ -1,55 +1,3 @@
-<script setup>
-import { ref } from 'vue'
-import axios from 'axios'
-import { useRouter } from 'vue-router'
-import { api,fixAvatar } from "../utils/common.js"
-const router = useRouter()
-const username = ref('')
-const password = ref('')
-const remember = ref(false)
-const msg = ref('')
-const showPassword = ref(false)
-
-// 登录
-const handleLogin = async () => {
-  try {
-    const res = await api.post('/api/login/', {
-      username: username.value,
-      password: password.value,
-      remember: remember.value,
-    }, {
-      withCredentials: true
-    })
-
-    if (res.data.success) {
-      msg.value = '登录成功'
-
-      const role = res.data.user.role
-      const user = res.data.user
-      localStorage.setItem('user', JSON.stringify(user))
-
-      if (role === '管理员') {
-        router.push('/admin')
-      } else if (role === '操作员') {
-        router.push('/operator')
-      } else if (role === '指派员') {
-        router.push('/appointer')
-      } else if (role === '运输员') {
-        router.push('/transporter')
-      } else {
-        msg.value = '未知角色'
-      }
-
-    } else {
-      msg.value = res.data.msg
-    }
-
-  } catch (e) {
-    msg.value = '请求失败'
-  }
-}
-</script>
-
 <template>
   <div class="page">
     <!-- 波浪背景 -->
@@ -109,6 +57,52 @@ const handleLogin = async () => {
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+import { api,fixAvatar } from "../utils/common.js"
+const router = useRouter()
+const username = ref('')
+const password = ref('')
+const remember = ref(false)
+const msg = ref('')
+const showPassword = ref(false)
+
+// 登录
+const handleLogin = async () => {
+  try {
+    const res = await api.post('/api/login/', {username: username.value,password: password.value,remember: remember.value,},{
+      withCredentials: true
+    })
+
+    if (res.data.success) {
+      msg.value = '登录成功'
+      const role = res.data.user.role
+      const user = res.data.user
+      localStorage.setItem('user', JSON.stringify(user))
+
+      if (role === '管理员') {
+        router.push('/admin')
+      } else if (role === '操作员') {
+        router.push('/operator')
+      } else if (role === '指派员') {
+        router.push('/appointer')
+      } else if (role === '运输员') {
+        router.push('/transporter')
+      } else {
+        msg.value = '未知角色'
+      }
+
+    } else {
+      msg.value = res.data.msg
+    }
+  } catch (e) {
+    msg.value = '请求失败'
+  }
+}
+</script>
 
 <style scoped>
 /* 背景 */

@@ -106,7 +106,6 @@ const keyword = ref('')
 
 const user = reactive({ name: '', role: '', avatar: '' })
 const defaultAvatar = 'https://via.placeholder.com/40'
-
 const pageRange = ref([])
 const buildPageRange = (cur, total) => {
   const range = []
@@ -216,7 +215,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center; 
 
   width: 100%;
   height: 48px;
@@ -298,7 +297,7 @@ table {
 th, td {
   padding:10px;
   border-bottom:1px solid #eee;
-  white-space: nowrap;   /* ⭐关键：不换行 */
+  white-space: nowrap;  
 }
 
 /* 操作列 */

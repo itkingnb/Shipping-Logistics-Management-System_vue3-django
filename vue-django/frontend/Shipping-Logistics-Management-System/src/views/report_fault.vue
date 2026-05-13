@@ -83,10 +83,7 @@ const router = useRouter()
 const user = reactive({})
 const tasks = ref([])
 
-const form = reactive({
-  task_id: '',
-  fault_info: ''
-})
+const form = reactive({task_id: '',fault_info: ''})
 
 const now = new Date().toLocaleString()
 const defaultAvatar = '/avatar.png'
@@ -193,7 +190,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center; 
 
   width: 100%;
   height: 48px;

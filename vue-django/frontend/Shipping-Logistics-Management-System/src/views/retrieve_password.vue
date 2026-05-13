@@ -1,43 +1,3 @@
-<script setup>
-import { ref } from 'vue'
-import axios from 'axios'
-import { useRouter } from 'vue-router'
-import { api,fixAvatar } from "../utils/common.js"
-const router = useRouter()
-
-const username = ref('')
-const password = ref('')
-const password2 = ref('')
-const msg = ref('')
-
-const show1 = ref(false)
-const show2 = ref(false)
-
-const handleSubmit = async () => {
-  if (password.value !== password2.value) {
-    msg.value = '两次密码不一致'
-    return
-  }
-
-  try {
-    const res = await api.post('http://127.0.0.1:8000/api/retrieve_password/', {
-      username: username.value,
-      password: password.value,
-      password2: password2.value
-    })
-
-    if (res.data.success) {
-      alert('修改成功')
-      router.push('/')
-    } else {
-      msg.value = res.data.msg
-    }
-  } catch (e) {
-    msg.value = '请求失败'
-  }
-}
-</script>
-
 <template>
   <div class="page">
     <!-- 波浪 -->
@@ -103,6 +63,47 @@ const handleSubmit = async () => {
   </div>
 </template>
 
+
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+import { api,fixAvatar } from "../utils/common.js"
+const router = useRouter()
+
+const username = ref('')
+const password = ref('')
+const password2 = ref('')
+const msg = ref('')
+
+const show1 = ref(false)
+const show2 = ref(false)
+
+const handleSubmit = async () => {
+  if (password.value !== password2.value) {
+    msg.value = '两次密码不一致'
+    return
+  }
+
+  try {
+    const res = await api.post('http://127.0.0.1:8000/api/retrieve_password/', {
+      username: username.value,
+      password: password.value,
+      password2: password2.value
+    })
+
+    if (res.data.success) {
+      alert('修改成功')
+      router.push('/')
+    } else {
+      msg.value = res.data.msg
+    }
+  } catch (e) {
+    msg.value = '请求失败'
+  }
+}
+</script>
+
 <style scoped>
 .page {
   position: relative;
@@ -132,7 +133,7 @@ const handleSubmit = async () => {
   opacity: 0.3;
 }
 
-/* 🚢 船 */
+/*  船 */
 .ship-icon {
   position: absolute;
   bottom: 50px;
@@ -207,7 +208,7 @@ const handleSubmit = async () => {
   box-shadow: 0 0 0 2px rgba(26,41,128,0.2);
 }
 
-/* 👁 */
+/*  */
 .toggle {
   position: absolute;
   right: 10px;

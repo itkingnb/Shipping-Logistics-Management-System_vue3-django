@@ -151,7 +151,6 @@ const roles = ref([
 
 const showPassword = ref(false)
 const showPassword2 = ref(false)
-
 const errors = ref([])
 const form = ref({
   username: '',

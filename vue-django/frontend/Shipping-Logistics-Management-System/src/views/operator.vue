@@ -84,7 +84,6 @@ const user = reactive({ name: '', role: '', avatar: '' })
 const kpi = reactive({ users: 0, orders: 0, cargo: 0, tasks: 0 })
 const startDate = ref('')
 const endDate = ref('')
-
 let pieChart = null
 let lineChart = null
 let barChart = null
@@ -250,7 +249,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center;  
 
   width: 100%;
   height: 48px;

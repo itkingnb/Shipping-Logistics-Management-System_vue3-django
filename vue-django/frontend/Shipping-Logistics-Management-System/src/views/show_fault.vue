@@ -111,11 +111,7 @@ const route = useRoute()
 const router = useRouter()
 
 const data = ref(null)
-const user = reactive({
-  name: '',
-  role: '',
-  avatar: ''
-})
+const user = reactive({name: '',role: '',avatar: ''})
 
 // ===== 获取详情 =====
 const load = async () => {

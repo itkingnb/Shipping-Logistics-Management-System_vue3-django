@@ -99,7 +99,6 @@ import { api, fixAvatar } from '../utils/common'
 
 const route = useRoute()
 const router = useRouter()
-
 const user = reactive({})
 const detail = reactive({})
 const defaultAvatar = '/avatar.png'

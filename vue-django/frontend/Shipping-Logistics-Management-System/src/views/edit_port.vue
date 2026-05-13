@@ -112,7 +112,6 @@ function getCookie(name) {
   })
   return value
 }
-
 /* ===== 加载数据 ===== */
 const loadData = async () => {
   const res = await api.get(`/api/edit-ports/${id}/`)
@@ -221,7 +220,7 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  justify-content: center;   /* ✅ 文字整体居中 */
+  justify-content: center; 
 
   width: 100%;
   height: 48px;
